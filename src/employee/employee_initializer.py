@@ -10,6 +10,7 @@ This module contains the following functions:
 """
 from employee_utilities import employee_utility
 import settings
+import mysql.connector
 
 def main():
     mydb = mysql.connector.connect(
@@ -18,8 +19,12 @@ def main():
           password = settings.OLTP_PASSWORD,
           port = settings.OLTP_PORT
         )
+    mydb.cursor().execute("USE sim_shop_oltp")
     
     utilities = employee_utility(mydb)
+    open_jobs = utilities.get_open_positions()
+    for job in open_jobs:
+        print(job[0], job[1])
 
-if __name__ == "__main"":
+if __name__ == "__main__":
     main()
