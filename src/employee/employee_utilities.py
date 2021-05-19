@@ -344,7 +344,7 @@ class employee_utility:
         
         return employee_data
 
-    def update_employee_repository(self, employee_data):
+    def update_employee_repository(self, employee_data, repo_name):
         """
         Adds employee's data to an csv employee repository
 
@@ -354,5 +354,7 @@ class employee_utility:
             employee_id, location_id, position_id, salary, start_date,
             end_date, gender, name, address, city, state_code, postal_code,
             email, dob, phone, cell
+
+        repo_name (str): Full file path name for the csv employee repository
         """
         pass

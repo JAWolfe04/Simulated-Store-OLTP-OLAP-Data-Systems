@@ -22,7 +22,7 @@ MOCK_EMPLOYEE_DATA = {
     "salary": 50000.00,
     "start_date": "2021-5-16",
     "end_date": None,
-    "gender": "female",
+    "gender": "f",
     "name": "Sophie Young",
     "address": "358 Daisy Dr",
     "city": "Lincoln",
