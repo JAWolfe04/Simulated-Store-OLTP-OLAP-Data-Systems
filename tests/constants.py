@@ -20,7 +20,7 @@ MOCK_EMPLOYEE_DATA = {
     "location_id": 1,
     "position_id": 1,
     "salary": 50000.00,
-    "start_date": "2021-5-16",
+    "start_date": "2021-05-16",
     "end_date": None,
     "gender": "f",
     "name": "Sophie Young",

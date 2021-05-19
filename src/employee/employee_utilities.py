@@ -11,7 +11,10 @@ import mysql.connector
 from mysql.connector import errorcode
 import datetime
 import random
+import re
 import requests
+import pandas
+from pathlib import Path
 
 RAND_USER_URL = ("https://randomuser.me/api/?nat=us&exc=login,picture,"
                  "registered,id,nat&noinfo")
@@ -357,4 +360,91 @@ class employee_utility:
 
         repo_name (str): Full file path name for the csv employee repository
         """
-        pass
+
+        if type(employee_data) is not dict:
+            raise TypeError("Provided employee_data is not a dictionary")
+
+        if(list(employee_data.keys()) != [
+            "employee_id", "location_id", "position_id", "salary", "start_date",
+            "end_date", "gender", "name", "address", "city", "state_code",
+            "postal_code", "email", "dob", "phone", "cell"]):
+            raise ValueError("Provided employee_data is formated incorrectly")
+
+        int_checks = ("employee_id", "location_id")
+        for key in int_checks:
+            if type(employee_data.get(key)) is not int:
+                raise TypeError("Provided {} is not a number".format(key))
+        
+        str_checks = ("start_date", "gender", "name", "address",
+                      "city", "state_code", "postal_code", "email", "dob",
+                      "phone", "cell")
+        for key in str_checks:
+            if type(employee_data.get(key)) is not str:
+                raise TypeError("Provided {} is not a string".format(key))
+
+        phone_regex = r"^\(\d{3}\)-\d{3}-\d{4}$"
+        date_regex = r"^[12][90][0-9][0-9]-[01][0-9]-[0-3][0-9]$"
+        email_regex = r"^(\w|\.|\_|\-)+[@](\w|\_|\-|\.)+[.]\w{2,3}$"
+        postal_regex = r"^\d{5}$"
+        state_regex = r"^[A-Z]{2}$"
+        
+        if not re.search(date_regex, employee_data.get("start_date")):
+            raise ValueError("Provided start_date is not formatted: "
+                             "YYYY-MM-DD")
+        elif (employee_data.get("gender") != "m" and
+              employee_data.get("gender") != "f"):
+            raise ValueError("Provided gender must be m or f")
+        elif len(employee_data.get("name").split()) != 2:
+            raise ValueError("Provided name must be first and last names")
+        elif len(employee_data.get("address").strip()) == 0:
+            raise ValueError("Provided address is invalid")
+        elif len(employee_data.get("city").strip()) == 0:
+            raise ValueError("Provided city must be a name")
+        elif not re.search(state_regex, employee_data.get("state_code")):
+            raise ValueError("Provided state_code is not formatted: AZ")
+        elif not re.search(postal_regex, employee_data.get("postal_code")):
+            raise ValueError("Provided postal_code is not formatted: #####")
+        elif not re.search(email_regex, employee_data.get("email")):
+            raise ValueError("Provided email is not formatted correctly")
+        elif not re.search(date_regex, employee_data.get("dob")):
+            raise ValueError("Provided dob is not formatted: YYYY-MM-DD")
+        elif not re.search(phone_regex, employee_data.get("phone")):
+            raise ValueError("Provided phone number is not formatted: "
+                             "(###)-###-####")
+        elif not re.search(phone_regex, employee_data.get("cell")):
+            raise ValueError("Provided cell number is not formatted: "
+                             "(###)-###-####")
+
+        # This function checks position and salary thus they do
+        # not need to be checked before this
+        self.check_salary(employee_data.get("position_id"),
+                          employee_data.get("salary"))
+
+        query = "SELECT employee_id FROM employee WHERE employee_id = %s"
+        self.database_cursor.execute(query, (employee_data.get("employee_id"),))
+        if len(self.database_cursor.fetchall()) == 0:
+            raise ValueError("Provided employee_id does not exist")
+
+        query = "SELECT location_id FROM location WHERE location_id = %s"
+        self.database_cursor.execute(query, (employee_data.get("location_id"),))
+        if len(self.database_cursor.fetchall()) == 0:
+            raise ValueError("Provided location_id does not exist")
+
+        if Path(repo_name).suffix != ".csv":
+            raise ValueError("Provided repo_name is not csv")
+
+        try:
+            repo_df = pandas.read_csv(repo_name)
+            repo_df = repo_df.set_index("employee_id")
+            repo_df = repo_df.astype({"postal_code": str})
+            new_data_df = pandas.DataFrame.from_dict([employee_data])
+            new_data_df = new_data_df.set_index("employee_id")
+            if employee_data.get("employee_id") in repo_df.index:
+                repo_df.update(new_data_df)
+            else:
+                repo_df = repo_df.append(new_data_df, ignore_index = True)
+            repo_df.to_csv(repo_name)
+        except (pandas.errors.EmptyDataError, FileNotFoundError):
+            repo_df = pandas.DataFrame.from_dict([employee_data])
+            repo_df = repo_df.set_index("employee_id")
+            repo_df.to_csv(repo_name)      

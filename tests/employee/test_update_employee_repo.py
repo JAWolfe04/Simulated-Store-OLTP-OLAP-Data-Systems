@@ -6,6 +6,7 @@ from src.employee.employee_utilities import employee_utility
 from tests.constants import MOCK_EMPLOYEE_DATA
         
 @pytest.mark.update_emp_repo
+@pytest.mark.usefixtures("setup_employees", "reset_employees", "setup_employee")
 class Test_Update_Employee_Repository:
     def write_test_employee_repo(self, employee_data, path):
         if path.exists(): path.remove()
@@ -29,7 +30,7 @@ class Test_Update_Employee_Repository:
             MOCK_EMPLOYEE_DATA, path)
         assert len(path.read_text().strip()) > 0
 
-    def test_updates_csv_repo_with_data(self, session, tmp_path):
+    def test_updates_csv_repo_with_data(self, session, cursor, tmp_path):
         path = tmp_path / "test_3_employee_repo.csv"
         pre_emp_repo_df = self.write_test_employee_repo(
             MOCK_EMPLOYEE_DATA, path)
@@ -37,6 +38,10 @@ class Test_Update_Employee_Repository:
         new_emp_data = copy.deepcopy(MOCK_EMPLOYEE_DATA)
         new_emp_data["employee_id"] = 2
         new_emp_data["location_id"] = 2
+        cursor.execute("INSERT INTO employee (location_id, position_id, "
+                       "name, salary, start_date) VALUES (2, 1, "
+                       "'Sophie Young', 50000.00, '2021-05-16')")
+        session.commit()
         employee_utility(session).update_employee_repository(
             new_emp_data, path)
         post_emp_repo_df = pandas.read_csv(path)
@@ -53,22 +58,26 @@ class Test_Update_Employee_Repository:
             new_emp_data, path)
         post_emp_repo_df = pandas.read_csv(path)
         post_emp_repo_df = post_emp_repo_df.set_index("employee_id")
+        post_emp_repo_df = post_emp_repo_df.astype({"postal_code": str})
         assert len(post_emp_repo_df.index) == len(pre_emp_repo_df.index)
         assert post_emp_repo_df.loc[1, "salary"] == 60000.00
-        assert (post_emp_repo_df.loc[1, post_emp_repo_df.columns != "salary"]
-                == pre_emp_repo_df.loc[1, pre_emp_repo_df.columns != "salary"])
+        test_fields = ["location_id", "position_id", "start_date", "gender",
+                       "name", "address", "city", "state_code", "postal_code",
+                       "email", "dob", "phone", "cell"]
+        assert post_emp_repo_df.loc[1, test_fields].equals(
+            pre_emp_repo_df.loc[1, test_fields])
     
     def test_only_accepts_csv_files(self, session, tmp_path):
         path = tmp_path / "test_5_employee_repo.xml"
         with pytest.raises(ValueError):
             assert employee_utility(session).update_employee_repository(
-                new_emp_data, path)
+                MOCK_EMPLOYEE_DATA, path)
 
     def test_with_non_existing_directory(self, session, tmp_path):
         path = tmp_path / "sub" / "test_6_employee_repo.csv"
         with pytest.raises(FileNotFoundError):
             assert employee_utility(session).update_employee_repository(
-                new_emp_data, path)
+                MOCK_EMPLOYEE_DATA, path)
 
     @pytest.mark.parametrize("has_data, has_path", [
         (False, True), (True, False)])
@@ -77,7 +86,7 @@ class Test_Update_Employee_Repository:
         emp_data = MOCK_EMPLOYEE_DATA if has_data else None
         with pytest.raises(TypeError):
             assert employee_utility(session).update_employee_repository(
-                new_emp_data, path)
+                emp_data, path)
 
     def test_with_wrong_employee_data_format(self, session, tmp_path):
         path = tmp_path / "test_8_employee_repo.csv"
@@ -86,25 +95,35 @@ class Test_Update_Employee_Repository:
                 {}, path)
 
     @pytest.mark.parametrize("key_name, key_value", [
-        ("employee_id", -1), ("employee_id", None),
-        ("location_id", -1), ("location_id", None),
-        ("position_id", -1), ("position_id", None),
-        ("salary", -1.00), ("salary", None),
-        ("start_date", None), ("start_date", "1000-01-01"),
-        ("gender", "female"), ("gender", None),
-        ("name", " "), ("name", "Joe "), ("name", None),
-        ("address", " "), ("address", None),
-        ("city", " "), ("city", None),
-        ("state_code", " "), ("state_code", "Alabama"), ("state_code", None),
-        ("postal_code", " "), ("postal_code", None),
-        ("postal_code", "aaaaa"), ("postal_code", "111111"),
-        ("email", " "), ("email", None), ("email", "@.com"),
-        ("dob", None), ("dob", "1000-01-01"),
-        ("phone", None), ("phone", "(1234)-567-7890"),
-        ("cell", None), ("cell", "(1234)-567-7890")])
+        ("employee_id", None), ("location_id", None),
+        ("position_id", None), ("salary", None),
+        ("start_date", None), ("gender", None),
+        ("name", None), ("address", None),
+        ("city", None), ("state_code", None),
+        ("postal_code", None), ("email", None),
+        ("dob", None), ("phone", None), ("cell", None)])
+    def test_non_nullable_fields(self, session, tmp_path, key_name, key_value):
+        path = tmp_path / "test_9_employee_repo.csv"
+        new_emp_data = copy.deepcopy(MOCK_EMPLOYEE_DATA)
+        new_emp_data[key_name] = key_value
+        with pytest.raises(TypeError):
+            assert employee_utility(session).update_employee_repository(
+                new_emp_data, path)
+
+    @pytest.mark.parametrize("key_name, key_value", [
+        ("employee_id", -1), ("location_id", -1),
+        ("position_id", -1), ("salary", -1.00), 
+        ("start_date", "1700-01-01"),
+        ("gender", "female"), ("name", " "), ("name", "Joe "),
+        ("address", " "), ("city", " "),
+        ("state_code", " "), ("state_code", "Alabama"),
+        ("postal_code", " "), ("postal_code", "aaaaa"),
+        ("postal_code", "111111"), ("email", " "), ("email", "@.com"),
+        ("dob", "1700-01-01"), ("phone", "(1234)-567-7890"),
+        ("cell", "(1234)-567-7890")])
     def test_with_wrong_employee_data_value_types(
             self, session, tmp_path, key_name, key_value):
-        path = tmp_path / "test_9_employee_repo.csv"
+        path = tmp_path / "test_10_employee_repo.csv"
         new_emp_data = copy.deepcopy(MOCK_EMPLOYEE_DATA)
         new_emp_data[key_name] = key_value
         with pytest.raises(ValueError):

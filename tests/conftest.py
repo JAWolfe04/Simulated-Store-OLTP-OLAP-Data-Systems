@@ -137,6 +137,12 @@ def setup_employees(session, cursor, setup_locations, setup_jobs):
     session.commit()
 
 @pytest.fixture
+def reset_employees(session, cursor):
+    cursor.execute("DELETE FROM employee")
+    cursor.execute("ALTER TABLE employee AUTO_INCREMENT = 1")
+    session.commit()
+
+@pytest.fixture
 def setup_employee(session, cursor):
     add_employee_query = (
         "INSERT INTO employee (location_id, position_id, "
