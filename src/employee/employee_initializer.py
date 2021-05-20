@@ -8,13 +8,10 @@ connect with and the third containing the user's password.
 This module contains the following functions:
     * main - the main function of the module
 """
-import os
-
-print("cwd: ", os.getcwd())
+import mysql.connector
 
 from src.employee.employee_utilities import employee_utility
 from src import settings
-import mysql.connector
 
 def main():
     mydb = mysql.connector.connect(
@@ -24,11 +21,10 @@ def main():
           port = settings.OLTP_PORT
         )
     mydb.cursor().execute("USE sim_shop_oltp")
-    
-    utilities = employee_utility(mydb)
-    open_jobs = utilities.get_open_positions()
-    for job in open_jobs:
-        print(job[0], job[1])
+
+    print("Generating employees...")
+    employee_utility(mydb).hire_all_open_positions()
+    print("All open positions filled")
 
 if __name__ == "__main__":
     main()

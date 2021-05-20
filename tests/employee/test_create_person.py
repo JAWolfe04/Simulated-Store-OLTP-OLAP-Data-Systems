@@ -2,6 +2,7 @@ import re
 
 import pytest
 import requests_mock
+from datetime import datetime
 
 from src.employee.employee_utilities import employee_utility, RAND_USER_URL
 from tests.constants import MOCK_JSON, MOCK_EMPLOYEE_DATA
@@ -45,7 +46,6 @@ class Test_Create_Person:
         requests_mock.get(RAND_USER_URL, status_code = 200, json = MOCK_JSON)
         data = employee_utility(session).create_person(1, 1)
         assert data.get("gender") == 'm' or data.get("gender") == 'f'
-        
 
     def test_returns_valid_salary_for_position(
             self, session, cursor, requests_mock):
@@ -72,3 +72,12 @@ class Test_Create_Person:
         data = employee_utility(session).create_person(1, 1)
         dob_format = "^[12][90][0-9][0-9]-[01][0-9]-[0-3][0-9]$"
         assert re.search(dob_format, data.get("dob"))
+
+    @pytest.mark.usefixtures("setup_employees")
+    def test_against_employee_data_validator(self, session, requests_mock):
+        requests_mock.get(RAND_USER_URL, status_code = 200, json = MOCK_JSON)
+        data = employee_utility(session).create_person(1, 1)
+        data["employee_id"] = 1
+        data["start_date"] = str(datetime.now().date())
+        employee_utility(session).employee_data_validator(data)
+        

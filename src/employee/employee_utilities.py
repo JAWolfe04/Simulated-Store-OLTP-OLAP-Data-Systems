@@ -103,6 +103,7 @@ class employee_utility:
         employee_id = self.database_cursor.lastrowid
 
         employee_data["employee_id"] = employee_id
+        employee_data["start_date"] = hire_data[4]
 
         self.employee_data_validator(employee_data)
 
@@ -112,6 +113,11 @@ class employee_utility:
         self.update_employee_repository(employee_data, path, False)
         
         return employee_id
+
+    def hire_all_open_positions(self, path = None):
+        open_jobs = self.get_open_positions()
+        for job in open_jobs:
+            self.hire_employee(self.create_person(job[0], job[1]), path)
 
     def fire_employee(self, employee_id):
         """
@@ -305,7 +311,7 @@ class employee_utility:
                          "address": emp_address,
                          "city": location_dict.get("city"),
                          "state_code": emp_state,
-                         "postal_code": location_dict.get("postcode"),
+                         "postal_code": str(location_dict.get("postcode")),
                          "email": response_json.get("email"),
                          "dob": emp_dob,
                          "phone":response_json.get("phone"),
@@ -352,7 +358,7 @@ class employee_utility:
             if employee_data.get("employee_id") in repo_df.index:
                 repo_df.update(new_data_df)
             else:
-                repo_df = repo_df.append(new_data_df, ignore_index = True)
+                repo_df = repo_df.append(new_data_df)
             repo_df.to_csv(repo_name)
         except (pandas.errors.EmptyDataError, FileNotFoundError):
             repo_df = pandas.DataFrame.from_dict([employee_data])
