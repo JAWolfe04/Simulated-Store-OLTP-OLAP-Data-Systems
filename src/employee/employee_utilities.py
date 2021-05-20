@@ -68,35 +68,6 @@ class employee_utility:
 
         self.database_connection = database_connection
         self.database_cursor = database_connection.cursor()
-
-    def check_salary(self, position_id, salary):
-        """
-        Checks if salary is within the min/max salary range for the position
-
-        Parameters
-        ----------
-        position_id (int): number indicating job position for the employee
-        salary (int): salary for the employee
-        """
-
-        if type(position_id) is not int:
-                raise TypeError('Provided position_id is not an integer')
-        elif type(salary) is not float:
-                raise TypeError('Provided salary is not a decimal number')
-            
-        salary_query = ("SELECT min_salary, max_salary FROM job_position "
-                        "WHERE position_id = %s")
-        self.database_cursor.execute(salary_query, (position_id,))
-        salary_result = self.database_cursor.fetchall()
-        if not salary_result:
-            raise ValueError("Provided position_id does not exist")
-        min_salary, max_salary = salary_result[0]
-        if salary < min_salary:
-            raise ValueError("Provided salary less than minimum allowable "
-                             "salary for this position")
-        elif salary > max_salary:
-            raise ValueError("Provided salary greater than maximum "
-                             "allowable salary for this position")
         
     def hire_employee(self, employee_data):
         """
@@ -234,7 +205,7 @@ class employee_utility:
         if len(job_results) == 0:
             raise ValueError("Provided employee_id was not found")
         
-        self.check_salary(job_results[0][0], salary)
+        self.salary_and_job_validator(job_results[0][0], salary)
 
         query = "UPDATE employee SET salary = %s WHERE employee_id = %s"
         self.database_cursor.execute(query, (salary, employee_id))
@@ -281,15 +252,13 @@ class employee_utility:
         if not response.ok:
             return None
 
-        if type(location_id) is not int:
-            raise TypeError('Provided location_id is not an integer')
-        elif type(position_id) is not int:
-            raise TypeError('Provided position_id is not an integer')
+        self.location_id_validator(location_id)
 
-        query = "SELECT location_id FROM location WHERE location_id = %s"
-        self.database_cursor.execute(query, (location_id,))
-        if len(self.database_cursor.fetchall()) == 0:
-            raise ValueError('Provided location_id does not exist')
+        # Dont use validate function since the method needs to get the
+        # min max salaries to generate a salary and calling the validate
+        # function will cause 2 database calls
+        if type(position_id) is not int:
+            raise TypeError('Provided position_id is not an integer')
         
         query = ("SELECT min_salary, max_salary FROM job_position "
                  "WHERE position_id = %s")
@@ -347,7 +316,8 @@ class employee_utility:
         
         return employee_data
 
-    def update_employee_repository(self, employee_data, repo_name):
+    def update_employee_repository(self, employee_data, repo_name,
+                                   validate = True):
         """
         Adds employee's data to an csv employee repository
 
@@ -359,8 +329,116 @@ class employee_utility:
             email, dob, phone, cell
 
         repo_name (str): Full file path name for the csv employee repository
+
+        validate (bool): Indicates if the employee_data should be validated
         """
 
+        if validate:
+            self.employee_data_validator(employee_data)
+
+            self.employee_id_validator(employee_data.get("employee_id"))
+
+            self.location_id_validator(employee_data.get("location_id"))
+
+            self.salary_and_job_validator(employee_data.get("position_id"),
+                              employee_data.get("salary"))
+
+        if Path(repo_name).suffix != ".csv":
+            raise ValueError("Provided repo_name is not csv")
+
+        try:
+            repo_df = pandas.read_csv(repo_name)
+            repo_df = repo_df.set_index("employee_id")
+            repo_df = repo_df.astype({"postal_code": str})
+            new_data_df = pandas.DataFrame.from_dict([employee_data])
+            new_data_df = new_data_df.set_index("employee_id")
+            if employee_data.get("employee_id") in repo_df.index:
+                repo_df.update(new_data_df)
+            else:
+                repo_df = repo_df.append(new_data_df, ignore_index = True)
+            repo_df.to_csv(repo_name)
+        except (pandas.errors.EmptyDataError, FileNotFoundError):
+            repo_df = pandas.DataFrame.from_dict([employee_data])
+            repo_df = repo_df.set_index("employee_id")
+            repo_df.to_csv(repo_name)
+
+    def employee_id_validator(self, employee_id):
+        if type(employee_id) is not int:
+            raise TypeError("Provided employee_id is not a number")
+
+        query = "SELECT employee_id FROM employee WHERE employee_id = %s"
+        self.database_cursor.execute(query, (employee_id,))
+        if len(self.database_cursor.fetchall()) == 0:
+            raise ValueError("Provided employee_id does not exist")
+        pass
+
+    def location_id_validator(self, location_id):
+        if type(location_id) is not int:
+            raise TypeError("Provided location_id is not a number")
+        
+        query = "SELECT location_id FROM location WHERE location_id = %s"
+        self.database_cursor.execute(query, (location_id,))
+        if len(self.database_cursor.fetchall()) == 0:
+            raise ValueError("Provided location_id does not exist")
+        
+
+    def salary_and_job_validator(self, position_id, salary):
+        """
+        Checks if position_id exists and if the salary is within the
+        min/max salary range for the position
+
+        Parameters
+        ----------
+        position_id (int): number indicating job position for the employee
+        salary (int): salary for the employee
+        """
+
+        if type(position_id) is not int:
+                raise TypeError('Provided position_id is not an integer')
+        elif type(salary) is not float:
+                raise TypeError('Provided salary is not a decimal number')
+            
+        salary_query = ("SELECT min_salary, max_salary FROM job_position "
+                        "WHERE position_id = %s")
+        self.database_cursor.execute(salary_query, (position_id,))
+        salary_result = self.database_cursor.fetchall()
+        if not salary_result:
+            raise ValueError("Provided position_id does not exist")
+        min_salary, max_salary = salary_result[0]
+        if salary < min_salary:
+            raise ValueError("Provided salary less than minimum allowable "
+                             "salary for this position")
+        elif salary > max_salary:
+            raise ValueError("Provided salary greater than maximum "
+                             "allowable salary for this position")
+
+    def employee_data_validator(self, employee_data):
+        """
+        Verifies certain fields of the employee data
+
+        Parameters
+        ----------
+        employee_data (dictionary): Dictionary containing keys for
+            employee_id, location_id, position_id, salary, start_date,
+            end_date, gender, name, address, city, state_code, postal_code,
+            email, dob, phone, cell
+
+        Raises:
+            TypeError:
+              - If employee_data is not a dictionary
+              - If start_date, gender, name, address, city, state_code,
+                postal_code, email, dob phone or cell fields are not strings
+            ValueError:
+              - If employee_data does not have the expected keys
+              - If start_date or dob is not formatted YYYY-MM-DD
+              - If gender is not 'm' or 'f'
+              - If name is not a first and last name
+              - If address or city is empty or white spaces
+              - If state_code is not 2 capital letters
+              - If postal_code is not 5 digits
+              - If email is not a valid email format
+              - If phone or cell are not formatted (###)-###-####
+        """
         if type(employee_data) is not dict:
             raise TypeError("Provided employee_data is not a dictionary")
 
@@ -370,11 +448,6 @@ class employee_utility:
             "postal_code", "email", "dob", "phone", "cell"]):
             raise ValueError("Provided employee_data is formated incorrectly")
 
-        int_checks = ("employee_id", "location_id")
-        for key in int_checks:
-            if type(employee_data.get(key)) is not int:
-                raise TypeError("Provided {} is not a number".format(key))
-        
         str_checks = ("start_date", "gender", "name", "address",
                       "city", "state_code", "postal_code", "email", "dob",
                       "phone", "cell")
@@ -413,38 +486,4 @@ class employee_utility:
                              "(###)-###-####")
         elif not re.search(phone_regex, employee_data.get("cell")):
             raise ValueError("Provided cell number is not formatted: "
-                             "(###)-###-####")
-
-        # This function checks position and salary thus they do
-        # not need to be checked before this
-        self.check_salary(employee_data.get("position_id"),
-                          employee_data.get("salary"))
-
-        query = "SELECT employee_id FROM employee WHERE employee_id = %s"
-        self.database_cursor.execute(query, (employee_data.get("employee_id"),))
-        if len(self.database_cursor.fetchall()) == 0:
-            raise ValueError("Provided employee_id does not exist")
-
-        query = "SELECT location_id FROM location WHERE location_id = %s"
-        self.database_cursor.execute(query, (employee_data.get("location_id"),))
-        if len(self.database_cursor.fetchall()) == 0:
-            raise ValueError("Provided location_id does not exist")
-
-        if Path(repo_name).suffix != ".csv":
-            raise ValueError("Provided repo_name is not csv")
-
-        try:
-            repo_df = pandas.read_csv(repo_name)
-            repo_df = repo_df.set_index("employee_id")
-            repo_df = repo_df.astype({"postal_code": str})
-            new_data_df = pandas.DataFrame.from_dict([employee_data])
-            new_data_df = new_data_df.set_index("employee_id")
-            if employee_data.get("employee_id") in repo_df.index:
-                repo_df.update(new_data_df)
-            else:
-                repo_df = repo_df.append(new_data_df, ignore_index = True)
-            repo_df.to_csv(repo_name)
-        except (pandas.errors.EmptyDataError, FileNotFoundError):
-            repo_df = pandas.DataFrame.from_dict([employee_data])
-            repo_df = repo_df.set_index("employee_id")
-            repo_df.to_csv(repo_name)      
+                             "(###)-###-####")      

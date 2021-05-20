@@ -30,18 +30,3 @@ class Test_Change_Salary:
             
         with pytest.raises(TypeError):
             assert employee_utility(session).change_salary(employee_id, salary)
-
-    @pytest.mark.parametrize("employee_id, salary", [
-        (-1, 60000.00),
-        (1000, 60000.00),
-        (0, 1.00),
-        (0, 1000000.00)])
-    def test_with_undesired_input(
-            self, session, setup_employee, employee_id, salary):
-        if employee_id == 0:
-            employee_id = setup_employee
-        else:
-            setup_employee
-            
-        with pytest.raises(ValueError):
-            assert employee_utility(session).change_salary(employee_id, salary)
