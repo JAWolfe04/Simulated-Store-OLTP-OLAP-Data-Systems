@@ -8,8 +8,12 @@ connect with and the third containing the user's password.
 This module contains the following functions:
     * main - the main function of the module
 """
-from employee_utilities import employee_utility
-import settings
+import os
+
+print("cwd: ", os.getcwd())
+
+from src.employee.employee_utilities import employee_utility
+from src import settings
 import mysql.connector
 
 def main():

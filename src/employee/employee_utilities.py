@@ -9,15 +9,13 @@ MySQL database.
 
 import mysql.connector
 from mysql.connector import errorcode
-import datetime
+from datetime import datetime
 import random
 import re
 import requests
 import pandas
 from pathlib import Path
-
-RAND_USER_URL = ("https://randomuser.me/api/?nat=us&exc=login,picture,"
-                 "registered,id,nat&noinfo")
+from src.constants import RAND_USER_URL, DEFAULT_REPO_NAME
 
 class employee_utility:
     """
@@ -69,7 +67,7 @@ class employee_utility:
         self.database_connection = database_connection
         self.database_cursor = database_connection.cursor()
         
-    def hire_employee(self, employee_data):
+    def hire_employee(self, employee_data, path = None):
         """
         Adds employee to the employee database and repository with the current
         date as start date and updates the manager id for a location if the
@@ -86,34 +84,34 @@ class employee_utility:
         -------
         int: employee id
         """
-        
-        try:
-            # Check if arguments fit type and value restrictions
-            if type(location_id) is not int:
-                raise TypeError('Provided location_id is not an integer')
-            elif type(name) is not str:
-                raise TypeError('Provided name is not a string')
-            elif len(name.strip()) == 0:
-                raise ValueError('Provided name does not contain a name')
+        self.location_id_validator(employee_data.get("location_id"))
 
-            self.check_salary(position_id, salary)
+        self.salary_and_job_validator(employee_data.get("position_id"),
+                          employee_data.get("salary"))
 
-            # Submit employee hire data to database
-            query = ("INSERT INTO employee (location_id, position_id, name, "
-                     "salary, start_date) VALUES (%s, %s, %s, %s, %s)")
-            hire_data = (location_id,
-                         position_id,
-                         name,
-                         salary,
-                         datetime.datetime.now())
-            self.database_cursor.execute(query, hire_data)
-            self.database_connection.commit()
-            
-            return self.database_cursor.lastrowid
+        # Submit employee hire data to database
+        query = ("INSERT INTO employee (location_id, position_id, name, "
+                 "salary, start_date) VALUES (%s, %s, %s, %s, %s)")
+        hire_data = (employee_data.get("location_id"),
+                     employee_data.get("position_id"),
+                     employee_data.get("name"),
+                     employee_data.get("salary"),
+                     str(datetime.now().date()))
+        self.database_cursor.execute(query, hire_data)
+        self.database_connection.commit()
+
+        employee_id = self.database_cursor.lastrowid
+
+        employee_data["employee_id"] = employee_id
+
+        self.employee_data_validator(employee_data)
+
+        if path is None:
+            path = Path.cwd() / DEFAULT_REPO_NAME
+
+        self.update_employee_repository(employee_data, path, False)
         
-        except mysql.connector.Error as err:
-            if err.errno == errorcode.ER_NO_REFERENCED_ROW_2:
-                raise ValueError("Provided location_id does not exist")
+        return employee_id
 
     def fire_employee(self, employee_id):
         """
@@ -131,8 +129,7 @@ class employee_utility:
             raise TypeError('Provided employee_id is not an integer')
         
         query = "UPDATE employee SET end_date = %s WHERE employee_id = %s"
-        self.database_cursor.execute(
-            query, (datetime.datetime.now(), employee_id))
+        self.database_cursor.execute(query, (datetime.now(), employee_id))
         self.database_connection.commit()
     
         if self.database_cursor.rowcount == 0:
