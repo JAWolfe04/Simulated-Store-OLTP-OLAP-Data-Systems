@@ -294,7 +294,6 @@ CREATE TABLE payment_item (
   payment_item_id int NOT NULL AUTO_INCREMENT,
   payment_id int NOT NULL,
   product_id int NOT NULL,
-  price decimal(10,0) NOT NULL,
   quantity int NOT NULL,
   PRIMARY KEY (payment_item_id),
   UNIQUE KEY payment_item_id (payment_item_id),
@@ -313,6 +312,7 @@ CREATE TABLE product (
   product_id int NOT NULL AUTO_INCREMENT,
   shelf_id int NOT NULL,
   product_name varchar(100) NOT NULL,
+  price decimal(10,0) NOT NULL
   brand_name varchar(100) NOT NULL,
   manufacturer_name varchar(100) NOT NULL,
   PRIMARY KEY (product_id),

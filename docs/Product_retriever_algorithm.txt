@@ -1,0 +1,124 @@
+Problem: Populate a product database 
+Constraints: All products must come from Walmart.com
+			 Up to a specified catalog size of products can be added to the database
+			 All products must be unique
+			 All products must be from the provided department links
+			 All categories in a department must be navigated
+			 No category should be navigated twice
+			 All products must be bestsellers
+			 Bestsellers should be collected from a specified depth of product list pages
+			 Product data can consist of product name, price, brand name, manufacturer name, shelf name and aisle name
+Input: List of department links, catalog size, product list depth, product database
+Output: Database filled with product data
+
+START
+	CALL fill_product_catalog with browse department links from Walmart.com
+END
+
+FUNCTION fill_product_catalog
+	Pass In: List of department links
+			 
+		SET dept_links from the input list of department links
+		SET product_links as an empty list
+		SET previous_links as an empty list
+		FOR each dept_link in dept_links
+			CALL retrieve_product_links with dept_link, previous_links, product_links
+		IF length of product_links > max catalog size
+			Scramble order of product_links
+		ENDIF
+		FOR each product_link in product_links up to max catalog size
+			CALL retrieve_product_data with product_link RETURNS product_data
+			CALL store_product_data with product_data
+			 
+	Pass Out: Nothing
+ENDFUNCTION
+
+FUNCTION retrieve_product_links
+	Pass in: Page link, previously visited links and a list of product links
+	
+		SET page_link from the input page link
+		SET previous_links from the input previously visited links
+		SET product_links from the input product links
+		ADD page_link to previous_links
+		CALL retrieve_link_body with product_link RETURN link_body
+		IF link_body contains a product list
+			CALL retrieve_bestseller_links with link_body RETURNS product_links
+			FOR each indicated level of page depth beginning with the second page
+				SET page_depth_link from page_link and the current level
+				CALL retrieve_link_body with page_depth_link RETURN product_list_body
+				CALL retrieve_bestseller_links with product_list_body RETURNS product_links
+		ELSE
+			CALL retrieve_catagories with link_body RETURNS category_links
+			FOR each link in category_links
+				IF link is not in previous_links
+					CALL retrieve_product_links with link, previous_links, product_links
+				ENDIF
+		ENDIF
+		
+	Pass out: Nothing
+ENDFUNCTION
+
+FUNCTION retrieve_product_data
+	Pass In: Product link
+	
+		SET product_data as an empty product template
+		SET product_link from the input product link
+		CALL retrieve_link_body with product_link RETURN link_body
+		GET product name, price, brand name, manufacturer name, shelf name and aisle name
+		ADD product data to product_data
+		ADD the appropriate department to product_data
+		RETURN product_data
+
+	Pass Out: Product data
+ENDFUNCTION
+
+FUNCTION store_product_data
+	Pass In: Product data
+	
+		INSERT product data into product database
+
+	Pass Out: Nothing
+ENDFUNCTION
+
+FUNCTION retrieve_link_body
+	Pass In: Link url
+		
+		SET link_url from the input link url
+		SET page_body as an empty string
+		REPEAT
+			Wait 10 seconds
+		UNTIL internet connection can be established
+		
+		REPEAT	
+			Wait 3 seconds
+			SET page_body to the page body from the link_url
+		UNTIL page_body no longer contains a re-captcha
+		
+		RETURN page_body
+	
+	Pass Out: Link body
+ENDFUNCTION
+
+FUNCTION retrieve_bestseller_links
+	Pass In: product page body, product links list
+		
+		SET page_body from the input product page body
+		SET product_links from the input product links list
+		GET bestseller links from page_body
+		SET bestseller_links from bestseller links
+		FOR each bestseller_link in bestseller_links
+			IF bestseller_link is not in product_links
+				ADD bestseller_link to product_links
+
+	Pass Out: Nothing
+ENDFUNCTION
+
+FUNCTION retrieve_category_links
+	Pass In: Page body
+		
+		SET page_body from the input page body
+		GET category links from page_body
+		RETURN category links
+
+	Pass Out: Category links
+ENDFUNCTION
