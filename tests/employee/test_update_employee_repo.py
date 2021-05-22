@@ -3,7 +3,7 @@ import pandas
 import copy
 
 from src.employee.employee_utilities import employee_utility
-from tests.constants import MOCK_EMPLOYEE_DATA
+from tests.employee.constants import MOCK_EMPLOYEE_DATA
         
 @pytest.mark.update_emp_repo
 @pytest.mark.usefixtures("setup_employees", "reset_employees", "setup_employee")

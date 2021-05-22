@@ -5,7 +5,7 @@ import requests_mock
 from datetime import datetime
 
 from src.employee.employee_utilities import employee_utility, RAND_USER_URL
-from tests.constants import MOCK_JSON, MOCK_EMPLOYEE_DATA
+from tests.employee.constants import MOCK_JSON, MOCK_EMPLOYEE_DATA
 
 @pytest.mark.create_person
 @pytest.mark.usefixtures("setup_jobs", "setup_locations")

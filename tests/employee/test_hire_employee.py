@@ -4,7 +4,7 @@ from pathlib import Path
 
 from src.employee.employee_utilities import employee_utility
 from src.employee.constants import DEFAULT_REPO_NAME
-from tests.constants import MOCK_EMPLOYEE_DATA
+from tests.employee.constants import MOCK_EMPLOYEE_DATA
 
 @pytest.mark.hire_emp
 @pytest.mark.usefixtures("setup_employees")

@@ -2,7 +2,7 @@ import pytest
 import copy
 
 from src.employee.employee_utilities import employee_utility
-from tests.constants import MOCK_EMPLOYEE_DATA
+from tests.employee.constants import MOCK_EMPLOYEE_DATA
 
 @pytest.mark.emp_data_validator
 class Test_Employee_Data_Validator:

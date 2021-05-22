@@ -2,7 +2,7 @@ import pytest
 import requests
 
 from src.employee.constants import RAND_USER_URL
-from constants import MOCK_JSON
+from tests.employee.constants import MOCK_JSON
 
 @pytest.mark.integration_tests
 class Test_Integration:
