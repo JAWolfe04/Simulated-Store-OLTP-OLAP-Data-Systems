@@ -15,7 +15,7 @@ import re
 import requests
 import pandas
 from pathlib import Path
-from src.constants import RAND_USER_URL, DEFAULT_REPO_NAME
+from src.employee.constants import RAND_USER_URL, DEFAULT_REPO_NAME
 
 class employee_utility:
     """

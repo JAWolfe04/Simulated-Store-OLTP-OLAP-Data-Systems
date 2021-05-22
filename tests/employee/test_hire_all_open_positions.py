@@ -4,7 +4,7 @@ import requests_mock
 import copy
 
 from src.employee.employee_utilities import employee_utility
-from src.constants import RAND_USER_URL
+from src.employee.constants import RAND_USER_URL
 from tests.constants import MOCK_EMPLOYEE_DATA, MOCK_JSON
 
 @pytest.mark.hire_all_emp

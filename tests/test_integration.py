@@ -1,7 +1,7 @@
 import pytest
 import requests
 
-from src.employee.employee_utilities import RAND_USER_URL
+from src.employee.constants import RAND_USER_URL
 from constants import MOCK_JSON
 
 @pytest.mark.integration_tests
