@@ -8,6 +8,7 @@ MySQL database.
 """
 
 import mysql.connector
+from bs4 import BeautifulSoup, element
 
 class product_utility:
     """
@@ -65,3 +66,69 @@ class product_utility:
         self.database_cursor = database_connection.cursor()
         self.max_catalog_size = max_catalog_size
         self.max_product_list_depth = max_product_list_depth
+
+    def retrieve_category_links(self, body):
+        """
+        Returns a list of category links found within the provided body
+
+        Parameters
+        ----------
+        body (bs4.element.tag): BeautifulSoup body tag for a html Walmart.com
+        page contains a list of categories to browse
+        """
+        if type(body) is not element.Tag:
+            raise TypeError("Provided body is not a bs4.element.Tag")
+
+        # The most characteristic part of the category list is the
+        # shop by heading, so it is probably best to start therre
+        category_header = body.find("h2", text = "Shop by Category")
+
+        # The heading can occasionally take the for of 'Shop X' category but
+        # this have the following class
+        if category_header is None:
+            category_header = body.find("h2", class_ = "header-title-5DR")
+
+        if category_header is None:
+            raise ValueError("Provided body does not contain category list")
+
+        # From the Shop by element, it has an ancester that has 'featured'
+        # in its class name
+        category_ancestor = category_header.parent
+        while("featured" not in "".join(category_ancestor['class']).lower()):
+            category_ancestor = category_ancestor.parent
+
+        # The second child divider of the featured class divider contains
+        # children with the links for each category
+        category_section = None
+        div_counter = 0
+        for sibling in category_ancestor.children:
+            if sibling.name == "div":
+                if div_counter == 1:
+                    category_section = sibling
+                    break
+                else:
+                    div_counter += 1
+
+        if category_section is None:
+            raise ValueError("Provided body does not contain a category "
+                             "section")
+        
+        category_links = []
+        for category in category_section.children:
+            try:
+                category_link = category.a.get("href")
+                if len(category_link) == 0:
+                    continue
+                elif category_link[0] == "/":
+                    category_link = "https://www.walmart.com" + category_link
+                elif category_link[0] == "w":
+                    category_link = "https://www." + category_link
+                    
+                category_links.append(category_link)
+            except AttributeError as e:
+                if e == "'NavigableString' object has no attribute 'a'":
+                    continue
+                
+            
+        return category_links
+

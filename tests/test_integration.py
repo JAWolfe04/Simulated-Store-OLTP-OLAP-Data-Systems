@@ -1,6 +1,12 @@
 import pytest
 import requests
+import time
 
+from bs4 import BeautifulSoup
+from selenium import webdriver
+
+from src.product.product_utilities import product_utility
+import src.product.constants as product_constant
 from src.employee.constants import RAND_USER_URL
 from tests.employee.constants import MOCK_JSON
 
@@ -12,6 +18,25 @@ class Test_Integration:
         response_keys = response.json().get("results")[0].keys()
         mock_keys = MOCK_JSON.get("results")[0].keys()
         assert response_keys == mock_keys
+
+    @pytest.mark.parametrize("file_name", [
+        ("https://www.walmart.com/cp/bath-body/1071969"),
+        ("https://www.walmart.com/cp/furniture/103150"),
+        ("https://www.walmart.com/cp/home/4044")])
+    def test_walmart_categoryies_returns_links(self, session, file_name):
+        utility = product_utility(session,
+                                  product_constant.MAX_CATALOG_SIZE,
+                                  product_constant.MAX_PRODUCT_LIST_DEPTH)
+        driver = webdriver.Chrome(
+            executable_path = "C:\\WebDriver\\bin\\chromedriver.exe")
+        driver.get(file_name)
+        time.sleep(3)
+        category_html = driver.page_source
+        driver.close()
+        soupPage = BeautifulSoup(category_html, 'html.parser')
+        
+        returned_links = utility.retrieve_category_links(soupPage.body)
+        assert len(returned_links) > 0
 
     def test_dev_database_connection(self, dev_session):
         assert dev_session.is_connected()
