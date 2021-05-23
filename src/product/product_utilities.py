@@ -74,7 +74,11 @@ class product_utility:
         Parameters
         ----------
         body (bs4.element.tag): BeautifulSoup body tag for a html Walmart.com
-        page contains a list of categories to browse
+        page containing a list of categories to browse
+
+        Returns
+        -------
+        list: List of category links
         """
         if type(body) is not element.Tag:
             raise TypeError("Provided body is not a bs4.element.Tag")
@@ -132,3 +136,42 @@ class product_utility:
             
         return category_links
 
+    def retrieve_bestseller_links(self, body, product_links):
+        """
+        Retrieves links of products flagged as Best Sellers from the provided
+        body and adds them to a set of provided product_links
+
+        Parameters
+        ----------
+        body (bs4.element.tag): BeautifulSoup body tag for a html Walmart.com
+        page containing a list of products to browse
+        product_links (set): Set of product links
+        """
+        if type(body) is not element.Tag:
+            raise TypeError("Provided body is not a bs4.element.Tag")
+        
+        product_list = body.find("div",{"class":"search-product-result"})
+
+        if type(product_links) is not set:
+            raise TypeError("Provided product_links is not a set")
+
+        if product_list is None:
+            raise ValueError("Provided body does is not a product list")
+
+        flagged_products = product_list.find_all(
+            "span", {"class": "flag-angle__content"})
+
+        for flag in flagged_products:
+            if flag.text == "Best Seller":
+                flag_li_parent = flag.find_parent("li")
+                if flag_li_parent is None:
+                    raise ValueError("Best Seller flag does not have the "
+                                     "expected parent format")
+                link = flag_li_parent.a
+                if (link is None or " ".join(link["class"])
+                    != "search-result-productimage gridview display-block"):
+                    raise ValueError("Unable to find expected link to flag")
+                product_links.add(link.get("href"))
+        
+        
+        

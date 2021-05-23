@@ -3,8 +3,6 @@ import requests
 import time
 
 from bs4 import BeautifulSoup
-from selenium import webdriver
-
 from src.product.product_utilities import product_utility
 import src.product.constants as product_constant
 from src.employee.constants import RAND_USER_URL
@@ -19,20 +17,37 @@ class Test_Integration:
         mock_keys = MOCK_JSON.get("results")[0].keys()
         assert response_keys == mock_keys
 
-    @pytest.mark.parametrize("file_name", [
-        ("https://www.walmart.com/cp/bath-body/1071969"),
-        ("https://www.walmart.com/cp/furniture/103150"),
-        ("https://www.walmart.com/cp/home/4044")])
-    def test_walmart_categoryies_returns_links(self, session, file_name):
+    @pytest.mark.parametrize("url, count", [
+        ("https://www.walmart.com/browse/food/baking-ingredients/976759_976780_9959366?cat_id=976759_976780_9959366_5053287",
+         4),
+        ("https://www.walmart.com/browse/health/allergy-and-sinus/976760_3771182",
+         8),
+        ("https://www.walmart.com/browse/office-supplies/notebooks-pads/1229749_4796182",
+         0)])
+    def test_walmart_product_list_returns_links(self, session,
+                                                url, count, browser):
         utility = product_utility(session,
                                   product_constant.MAX_CATALOG_SIZE,
                                   product_constant.MAX_PRODUCT_LIST_DEPTH)
-        driver = webdriver.Chrome(
-            executable_path = "C:\\WebDriver\\bin\\chromedriver.exe")
-        driver.get(file_name)
+        browser.get(url)
         time.sleep(3)
-        category_html = driver.page_source
-        driver.close()
+        products_html = browser.page_source
+        soupPage = BeautifulSoup(products_html, 'html.parser')
+        returned_links = set()
+        utility.retrieve_bestseller_links(soupPage.body, returned_links)
+        assert len(returned_links) == count
+
+    @pytest.mark.parametrize("url", [
+        ("https://www.walmart.com/cp/bath-body/1071969"),
+        ("https://www.walmart.com/cp/furniture/103150"),
+        ("https://www.walmart.com/cp/home/4044")])
+    def test_walmart_categories_returns_links(self, session, url, browser):
+        utility = product_utility(session,
+                                  product_constant.MAX_CATALOG_SIZE,
+                                  product_constant.MAX_PRODUCT_LIST_DEPTH)
+        browser.get(url)
+        time.sleep(3)
+        category_html = browser.page_source
         soupPage = BeautifulSoup(category_html, 'html.parser')
         
         returned_links = utility.retrieve_category_links(soupPage.body)

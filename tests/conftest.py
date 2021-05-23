@@ -2,8 +2,16 @@ import pytest
 import datetime
 
 import mysql.connector
+from selenium import webdriver
 
 from src import settings
+
+@pytest.fixture(scope="session")
+def browser():
+    driver = webdriver.Chrome(
+            executable_path = "C:\\WebDriver\\bin\\chromedriver.exe")
+    yield driver
+    driver.close()
 
 @pytest.fixture(scope="session")
 def session():
