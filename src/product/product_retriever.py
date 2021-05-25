@@ -24,12 +24,18 @@ def main():
         )
     mydb.cursor().execute("USE sim_shop_oltp")
 
+    browser = webdriver.Chrome(
+            executable_path = "C:\\WebDriver\\bin\\chromedriver.exe")
+
     print("Retrieving {} products' data...").format(constant.MAX_CATALOG_SIZE)
     utility = product_utility(mydb,
+                              browser,
                               constant.MAX_CATALOG_SIZE,
                               constant.MAX_PRODUCT_LIST_DEPTH)
     utility.fill_product_catalog(constant.DEPARTMENT_LINKS)
     print("Finished retrieving product data")
+
+    driver.close()
 
 if __name__ == "__main__":
     main()

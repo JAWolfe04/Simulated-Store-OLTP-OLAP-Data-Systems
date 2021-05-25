@@ -26,7 +26,7 @@ class Test_Retrieve_Category_Links:
         ("tests/product/test_pages/Category_Page_Empty_Categories.html", True),
         ("tests/product/test_pages/Category_Page_Bad_Prefix.html", False)])
     def test_smoke_returns_expected_links(
-            self, session, file_name, empty_result):
+            self, session, browser, file_name, empty_result):
         # First test runs an average expected category html page
         # Second test runs the same page but with categories removed
         # Third test runs the same page as the first test but with one
@@ -35,6 +35,7 @@ class Test_Retrieve_Category_Links:
         # another with the 'https://www.' prefix missing and another with an
         # empty link
         utility = product_utility(session,
+                                  browser,
                                   constant.MAX_CATALOG_SIZE,
                                   constant.MAX_PRODUCT_LIST_DEPTH)
         with open(file_name, "r", encoding="utf8") as file:
@@ -46,8 +47,9 @@ class Test_Retrieve_Category_Links:
             else:
                 assert returned_links == self.category_links
 
-    def test_raises_TypeError_with_None(self, session):
+    def test_raises_TypeError_with_None(self, session, browser):
         utility = product_utility(session,
+                                  browser,
                                   constant.MAX_CATALOG_SIZE,
                                   constant.MAX_PRODUCT_LIST_DEPTH)
         with pytest.raises(TypeError):
@@ -56,10 +58,12 @@ class Test_Retrieve_Category_Links:
     @pytest.mark.parametrize("file_name", [
         ("tests/product/test_pages/Category_Page_Empty_Body.html"),
         ("tests/product/test_pages/Category_Page_No_Categories.html")])
-    def test_raises_ValueError_with_missing_content(self, session, file_name):
+    def test_raises_ValueError_with_missing_content(self, session,
+                                                    browser, file_name):
         # First test passes a category html with an empty body
         # Second test passes a category html with the category div removed
         utility = product_utility(session,
+                                  browser,
                                   constant.MAX_CATALOG_SIZE,
                                   constant.MAX_PRODUCT_LIST_DEPTH)
         with open(file_name, "r", encoding="utf8") as file:

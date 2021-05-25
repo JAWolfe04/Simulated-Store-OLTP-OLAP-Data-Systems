@@ -22,6 +22,7 @@ class Test_Integration:
         ("https://www.walmart.com/ip/Maybelline-Color-Sensational-Shine-Compulsion-Lipstick-Makeup-Taupe-Seduction-0-1-oz/607432038")])
     def test_walmart_product_data_returns_data(self, session, url, browser):
         utility = product_utility(session,
+                                  browser,
                                   product_constant.MAX_CATALOG_SIZE,
                                   product_constant.MAX_PRODUCT_LIST_DEPTH)
         utility.department_name = "Food"
@@ -56,6 +57,7 @@ class Test_Integration:
     def test_walmart_product_list_returns_links(self, session,
                                                 url, count, browser):
         utility = product_utility(session,
+                                  browser,
                                   product_constant.MAX_CATALOG_SIZE,
                                   product_constant.MAX_PRODUCT_LIST_DEPTH)
         browser.get(url)
@@ -72,6 +74,7 @@ class Test_Integration:
         ("https://www.walmart.com/cp/home/4044")])
     def test_walmart_categories_returns_links(self, session, url, browser):
         utility = product_utility(session,
+                                  browser,
                                   product_constant.MAX_CATALOG_SIZE,
                                   product_constant.MAX_PRODUCT_LIST_DEPTH)
         browser.get(url)

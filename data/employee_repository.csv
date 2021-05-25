@@ -1,6 +1,6 @@
 employee_id,location_id,position_id,salary,start_date,end_date,gender,name,address,city,state_code,postal_code,email,dob,phone,cell
 1,10.0,1.0,81258.96,2021-05-20,,m,Neil Sutton,5430 Stevens Creek Blvd,Newport News,SD,29948,neil.sutton@example.com,1977-07-10,(115)-651-6345,(877)-728-2647
-2,1.0,1.0,50000.0,2021-05-21,,f,Sophie Young,358 Daisy Dr,Lincoln,DE,81807,sophie.young@example.com,1953-07-15,(447)-017-7966,(110)-838-1074
+2,1.0,1.0,50000.0,2021-05-25,,f,Sophie Young,358 Daisy Dr,Lincoln,DE,81807,sophie.young@example.com,1953-07-15,(447)-017-7966,(110)-838-1074
 3,8.0,1.0,60170.91,2021-05-20,,m,Elmer Douglas,9804 Cackson St,Murfreesboro,VT,15350,elmer.douglas@example.com,1987-03-12,(764)-400-0288,(577)-299-8139
 4,7.0,1.0,81595.59,2021-05-20,,m,Juan Russell,1635 Groveland Terrace,Nashville,CO,18757,juan.russell@example.com,1952-02-05,(717)-491-8800,(737)-389-0179
 5,6.0,1.0,54008.96,2021-05-20,,f,Debbie Morales,6686 Stevens Creek Blvd,Red Oak,NY,39511,debbie.morales@example.com,1995-11-26,(195)-679-1836,(827)-868-2763

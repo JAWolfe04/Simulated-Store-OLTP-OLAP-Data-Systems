@@ -32,8 +32,9 @@ class Test_Retrieve_Product_Data:
           "aisle_name": "Bath & Body",
           "department_name": "Beauty, Bath and Health"})])
     def test_smoke_returns_expected_data(
-            self, session, file_name, expected_data):
+            self, session, browser, file_name, expected_data):
         utility = product_utility(session,
+                                  browser,
                                   constant.MAX_CATALOG_SIZE,
                                   constant.MAX_PRODUCT_LIST_DEPTH)
         utility.department_name = expected_data.get("department_name")
@@ -41,8 +42,9 @@ class Test_Retrieve_Product_Data:
         assert product_data == expected_data
 
     @pytest.mark.parametrize("has_body", [(True), (False)])
-    def test_raises_TypeError_with_None(self, session, has_body):
+    def test_raises_TypeError_with_None(self, session, browser, has_body):
         utility = product_utility(session,
+                                  browser,
                                   constant.MAX_CATALOG_SIZE,
                                   constant.MAX_PRODUCT_LIST_DEPTH)
         with pytest.raises(TypeError):
@@ -63,10 +65,9 @@ class Test_Retrieve_Product_Data:
         ("tests/product/test_pages/Product_Page_2_Breadcrumb_Item.html"),
         ("tests/product/test_pages/Product_Page_No_Spec.html"),
         ("tests/product/test_pages/Product_Page_No_Brand_Row.html"),
-        ("tests/product/test_pages/Product_Page_No_Brand_Name.html"),
-        ("tests/product/test_pages/Product_Page_No_Mfr_Row.html"),
-        ("tests/product/test_pages/Product_Page_No_Mfr_Name.html")])
-    def test_raises_ValueError_with_Missing_Tags(self, session, file_name):
+        ("tests/product/test_pages/Product_Page_No_Brand_Name.html")])
+    def test_raises_ValueError_with_Missing_Tags(self, session,
+                                                 browser, file_name):
         #1st test is missing the product name tag
         #2nd test is missing the price section
         #3rd test is missing the dollar amount tag
@@ -77,10 +78,9 @@ class Test_Retrieve_Product_Data:
         #8th test is missing the spec table
         #9th test is missing the brand row
         #10th test is missing the brand value
-        #11th test is missing the manufacturer row
-        #12th test is missing the manufacturer value
         
         utility = product_utility(session,
+                                  browser,
                                   constant.MAX_CATALOG_SIZE,
                                   constant.MAX_PRODUCT_LIST_DEPTH)
         with pytest.raises(ValueError):
