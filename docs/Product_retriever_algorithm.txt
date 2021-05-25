@@ -22,12 +22,14 @@ FUNCTION fill_product_catalog
 		SET product_links as an empty list
 		SET previous_links as an empty list
 		FOR each dept_link in dept_links
+			SET department_name for the class performing the data retrieval
 			CALL retrieve_product_links with dept_link, previous_links, product_links
 		IF length of product_links > max catalog size
 			Scramble order of product_links
 		ENDIF
 		FOR each product_link in product_links up to max catalog size
-			CALL retrieve_product_data with product_link RETURNS product_data
+			CALL retrieve_link_body with product_link RETURN link_body
+			CALL retrieve_product_data with link_body RETURNS product_data
 			CALL store_product_data with product_data
 			 
 	Pass Out: Nothing
@@ -58,20 +60,6 @@ FUNCTION retrieve_product_links
 	Pass out: Nothing
 ENDFUNCTION
 
-FUNCTION retrieve_product_data
-	Pass In: Product link
-	
-		SET product_data as an empty product template
-		SET product_link from the input product link
-		CALL retrieve_link_body with product_link RETURN link_body
-		GET product name, price, brand name, manufacturer name, shelf name and aisle name
-		ADD product data to product_data
-		ADD the appropriate department to product_data
-		RETURN product_data
-
-	Pass Out: Product data
-ENDFUNCTION
-
 FUNCTION store_product_data
 	Pass In: Product data
 	
@@ -99,8 +87,21 @@ FUNCTION retrieve_link_body
 	Pass Out: Link body
 ENDFUNCTION
 
+FUNCTION retrieve_product_data
+	Pass In: Product body
+	
+		SET product_data as an empty product template
+		SET product_link from the input product link
+		GET product name, price, brand name, manufacturer name, shelf name and aisle name
+		ADD product data to product_data
+		ADD the appropriate department to product_data
+		RETURN product_data
+
+	Pass Out: Product data
+ENDFUNCTION
+
 FUNCTION retrieve_bestseller_links
-	Pass In: product page body, product links list
+	Pass In: Product List Page body, Product links list
 		
 		SET page_body from the input product page body
 		SET product_links from the input product links list
@@ -114,7 +115,7 @@ FUNCTION retrieve_bestseller_links
 ENDFUNCTION
 
 FUNCTION retrieve_category_links
-	Pass In: Page body
+	Pass In: Category Page body
 		
 		SET page_body from the input page body
 		GET category links from page_body

@@ -66,6 +66,7 @@ class product_utility:
         self.database_cursor = database_connection.cursor()
         self.max_catalog_size = max_catalog_size
         self.max_product_list_depth = max_product_list_depth
+        self.department_name = None
 
     def retrieve_category_links(self, body):
         """
@@ -173,5 +174,92 @@ class product_utility:
                     raise ValueError("Unable to find expected link to flag")
                 product_links.add(link.get("href"))
         
+    def retrieve_product_data(self, body):
+        """
+        Retrieves product data: name, price, brand name, manufacturer name,
+        shelf name, aisle name and department name from the provided body
+        containing a Walmart.com product page
+
+        Parameters
+        ----------
+        body (bs4.element.tag): BeautifulSoup body tag for a html Walmart.com
+        page containing a list of products to browse
+
+        Returns
+        -------
+        (dict): Dictionary with name, price, brand_name, manufacturer_name,
+                shelf_name, aisle_name and department_name
+        """
+        if type(body) is not element.Tag:
+            raise TypeError("Provided body is not a bs4.element.Tag")
+
+        if type(self.department_name) is not str:
+            raise TypeError("Department name is not a string or the "
+                            "department name has not been set")
         
+        product_name = body.select_one(
+            "h1.prod-ProductTitle.prod-productTitle-buyBox.font-bold")
+        if product_name is None:
+            raise ValueError("Product name could not be found")
+
+        price_section = body.select_one("div.prod-PriceHero")
+        if price_section is None:
+            raise ValueError("Price could not be found")
         
+        dollar_amount = price_section.select_one("span.price-characteristic")
+        if dollar_amount is None:
+            raise ValueError("Product dollar amount could not be found")
+        
+        cents_amount  = price_section.select_one("span.price-mantissa")
+        if cents_amount is None:
+            raise ValueError("Product cent amount could not be found")
+        
+        price = dollar_amount.text + '.' + cents_amount.text
+
+        breadcrumb_element = body.select_one("ol.breadcrumb-list")
+        if breadcrumb_element is None:
+            raise ValueError("Breadcrumb could not be found")
+        
+        breadcrumb_list = breadcrumb_element.contents        
+        if len(breadcrumb_list) <= 2:
+            raise ValueError("Too few Breadcrumbs, must be at least 3")
+        
+        aisle_name = breadcrumb_list[1].a.span.text
+        shelf_name = None
+        if len(breadcrumb_list) > 3:
+            shelf_name = breadcrumb_list[-2].a.span.text
+        else:
+            shelf_name = breadcrumb_list[-1].a.span.text
+        
+        brand = None
+        manufacturer = None
+        spec_table = body.select_one(
+            "table.product-specification-table.table-striped")
+        if spec_table is None:
+            raise ValueError("Specification Table could not be found")
+        spec_tbody = spec_table.tbody
+        spec_rows = spec_tbody.find_all('tr')
+        for row in spec_rows:
+            cols = row.find_all('td')
+            if cols[0].text == 'Brand':
+                if len(cols) == 1:
+                    raise ValueError("Brand name could not be found")
+                brand = cols[1].text
+            elif cols[0].text == 'Manufacturer':
+                if len(cols) == 1:
+                    raise ValueError("Manufacturer name could not be found")
+                manufacturer = cols[1].text
+
+        if brand is None:
+            raise ValueError("Brand name row could not be found")
+        if manufacturer is None:
+            manufacturer = brand
+        
+        return {
+            "name": product_name.text,
+            "price": float(price),
+            "brand_name": brand,
+            "manufacturer_name": manufacturer,
+            "shelf_name": shelf_name,
+            "aisle_name": aisle_name,
+            "department_name": self.department_name}

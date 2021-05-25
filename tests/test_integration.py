@@ -17,13 +17,42 @@ class Test_Integration:
         mock_keys = MOCK_JSON.get("results")[0].keys()
         assert response_keys == mock_keys
 
+    @pytest.mark.parametrize("url", [
+        ("https://www.walmart.com/ip/Gluten-Free-Cinnamon-Buns-Mini-Glazed-Rolls-Breakfast-Pastry-Rugelach-Pastries-Croissants-Dairy-Nut-Soy-Kosher-7-oz-Katz/169182769"),
+        ("https://www.walmart.com/ip/Maybelline-Color-Sensational-Shine-Compulsion-Lipstick-Makeup-Taupe-Seduction-0-1-oz/607432038")])
+    def test_walmart_product_data_returns_data(self, session, url, browser):
+        utility = product_utility(session,
+                                  product_constant.MAX_CATALOG_SIZE,
+                                  product_constant.MAX_PRODUCT_LIST_DEPTH)
+        utility.department_name = "Food"
+        browser.get(url)
+        time.sleep(3)
+        element = browser.find_elements_by_xpath(
+            "//*[contains(text(), 'Specifications')]")
+        element[0].click()
+        time.sleep(2)
+        nav = browser.find_element_by_class_name('persistent-subnav-list')
+        new_element = nav.find_elements_by_xpath(
+            "//*[contains(text(), 'Specifications')]")
+        new_element[0].click()
+        products_html = browser.page_source
+        soupPage = BeautifulSoup(products_html, 'html.parser')
+        product_data = utility.retrieve_product_data(soupPage.body)
+        assert len(product_data["name"]) > 0
+        assert product_data["price"] > 0.00
+        assert len(product_data["brand_name"]) > 0
+        assert len(product_data["manufacturer_name"]) > 0
+        assert len(product_data["shelf_name"]) > 0
+        assert len(product_data["aisle_name"]) > 0
+        assert len(product_data["department_name"]) > 0
+
     @pytest.mark.parametrize("url, count", [
         ("https://www.walmart.com/browse/food/baking-ingredients/976759_976780_9959366?cat_id=976759_976780_9959366_5053287",
          4),
         ("https://www.walmart.com/browse/health/allergy-and-sinus/976760_3771182",
          8),
         ("https://www.walmart.com/browse/office-supplies/notebooks-pads/1229749_4796182",
-         0)])
+         1)])
     def test_walmart_product_list_returns_links(self, session,
                                                 url, count, browser):
         utility = product_utility(session,
