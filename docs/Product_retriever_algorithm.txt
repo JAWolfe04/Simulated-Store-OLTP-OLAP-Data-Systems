@@ -21,16 +21,13 @@ FUNCTION fill_product_catalog
 		SET dept_links from the input list of department links
 		SET product_links as an empty list
 		SET previous_links as an empty list
+		SET previously_collected_products as an empty list
+		READ FROM FILE Product_Links.txt RETURN product_links
+		READ FROM FILE Previous_Links.txt RETURN previously_collected_products
 		FOR each dept_link in dept_links
 			SET department_name for the class performing the data retrieval
-			CALL retrieve_product_links with dept_link, previous_links, product_links
-		IF length of product_links > max catalog size
-			Scramble order of product_links
-		ENDIF
-		FOR each product_link in product_links up to max catalog size
-			CALL retrieve_link_body with product_link RETURN link_body
-			CALL retrieve_product_data with link_body RETURNS product_data
-			CALL store_product_data with product_data
+			CALL retrieve_product_links with dept_link, previous_links, product_links		
+		CALL retrieve_product_catalog with product_links
 			 
 	Pass Out: Nothing
 ENDFUNCTION
@@ -44,11 +41,16 @@ FUNCTION retrieve_product_links
 		ADD page_link to previous_links
 		CALL retrieve_link_body with product_link RETURN link_body
 		IF link_body contains a product list
-			CALL retrieve_bestseller_links with link_body RETURNS product_links
-			FOR each indicated level of page depth beginning with the second page
-				SET page_depth_link from page_link and the current level
-				CALL retrieve_link_body with page_depth_link RETURN product_list_body
-				CALL retrieve_bestseller_links with product_list_body RETURNS product_links
+			IF page_link is not in previously_collected_products
+				ADD page_link to previously_collected_products
+				CALL retrieve_bestseller_links with link_body RETURNS product_links
+				FOR each indicated level of page depth beginning with the second page
+					SET page_depth_link from page_link and the current level
+					CALL retrieve_link_body with page_depth_link RETURN product_list_body
+					CALL retrieve_bestseller_links with product_list_body RETURNS product_links
+				WRITE TO FILE Product_Links.txt with product_links
+				WRITE TO FILE Previous_Links.txt with previously_collected_products
+			ENDIF
 		ELSE
 			CALL retrieve_catagories with link_body RETURNS category_links
 			FOR each link in category_links
@@ -60,12 +62,37 @@ FUNCTION retrieve_product_links
 	Pass out: Nothing
 ENDFUNCTION
 
+FUNCTION retrieve_product_catalog
+	Pass In: List of product links
+	
+		SET product_links from the input list of product links
+		IF length of product_links > max catalog size
+			Scramble order of product_links
+		ENDIF
+		SET batch_removal_counter = 0
+		FOR each product_link in product_links up to max catalog size
+			CALL retrieve_link_body with product_link RETURN link_body
+			CALL retrieve_product_data with link_body RETURNS product_data
+			CALL store_product_data with product_data
+			INCREMENT batch_removal_counter
+			IF batch_removal_counter == 10
+				READ FROM FILE Product_Links.txt RETURN temp_links
+				Remove first 10 lines of links
+				WRITE TO FILE Product_Links.txt with temp_links
+				SET batch_removal_counter to 0
+			ENDIF
+	
+	Pass Out: Nothing
+ENDFUNCTION
+
 FUNCTION store_product_data
 	Pass In: Product data
 	
 		INSERT product data into product database
+		GET product ID
+		RETURN product ID
 
-	Pass Out: Nothing
+	Pass Out: Product ID
 ENDFUNCTION
 
 FUNCTION retrieve_link_body

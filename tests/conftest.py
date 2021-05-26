@@ -144,10 +144,55 @@ def setup_employees(session, cursor, setup_locations, setup_jobs):
             FOREIGN KEY (manager_id) REFERENCES employee (employee_id)""")
     session.commit()
 
+@pytest.fixture(scope="session")
+def setup_shelf(session, cursor, setup_departments):
+    cursor.execute("""CREATE TABLE shelf (
+                          shelf_id int NOT NULL AUTO_INCREMENT,
+                          department_id int NOT NULL,
+                          shelf_name varchar(50) NOT NULL,
+                          aisle_name varchar(50) NOT NULL,
+                          PRIMARY KEY (shelf_id),
+                          UNIQUE KEY shelf_id (shelf_id),
+                          KEY department_id (department_id),
+                          CONSTRAINT shelf_ibfk_1 FOREIGN KEY
+                          (department_id) REFERENCES department (department_id)
+                          )""")
+    session.commit()
+
+@pytest.fixture(scope="session")
+def setup_product(session, cursor, setup_shelf):
+    cursor.execute("""CREATE TABLE product (
+                        product_id int NOT NULL AUTO_INCREMENT,
+                        shelf_id int NOT NULL,
+                        product_name varchar(100) NOT NULL,
+                        price decimal(10,0) NOT NULL,
+                        brand_name varchar(100) NOT NULL,
+                        manufacturer_name varchar(100) NOT NULL,
+                        PRIMARY KEY (product_id),
+                        UNIQUE KEY product_id (product_id),
+                        UNIQUE KEY product_name (product_name),
+                        KEY shelf_id (shelf_id),
+                        CONSTRAINT product_ibfk_1 FOREIGN KEY
+                          (shelf_id) REFERENCES shelf (shelf_id)
+                        )""")
+    session.commit()
+
 @pytest.fixture
 def reset_employees(session, cursor):
     cursor.execute("DELETE FROM employee")
     cursor.execute("ALTER TABLE employee AUTO_INCREMENT = 1")
+    session.commit()
+
+@pytest.fixture
+def reset_shelves(session, cursor):
+    cursor.execute("DELETE FROM shelf")
+    cursor.execute("ALTER TABLE shelf AUTO_INCREMENT = 1")
+    session.commit()
+
+@pytest.fixture
+def reset_products(session, cursor):
+    cursor.execute("DELETE FROM product")
+    cursor.execute("ALTER TABLE product AUTO_INCREMENT = 1")
     session.commit()
 
 @pytest.fixture
@@ -160,3 +205,13 @@ def setup_employee(session, cursor):
         (1, 1, 'Jane Doe', 50000.00, datetime.datetime.now()))
     session.commit()
     return cursor.lastrowid
+
+@pytest.fixture
+def sim_product_data():
+    return {"name": "Cuisinart Toaster Oven Broilers Air Fryer",
+            "price": 199.00,
+            "brand_name": "Cuisinart",
+            "manufacturer_name": "Conair",
+            "shelf_name": "Toaster Ovens",
+            "aisle_name":"Appliances",
+            "department_name": "Home and Office"}

@@ -55,22 +55,6 @@ class Test_Retrieve_Link_Body:
         assert len(product_data["aisle_name"]) > 0
         assert len(product_data["department_name"]) > 0
 
-    def test_waits_three_seconds_with_non_product_data(self, session, browser):
-        url = "https://www.walmart.com/cp/home/4044"
-        utility = product_utility(session,
-                                  browser,
-                                  constant.MAX_CATALOG_SIZE,
-                                  constant.MAX_PRODUCT_LIST_DEPTH)
-        link_body = utility.retrieve_link_body(url)
-
-    def test_waits_five_seconds_with_product_data(self, session, browser):
-        url = "https://www.walmart.com/ip/Olay-Moisture-Ribbons-Plus-Body-Wash-Shea-and-Blue-Lotus-18-fl-oz/724204321"
-        utility = product_utility(session,
-                                  browser,
-                                  constant.MAX_CATALOG_SIZE,
-                                  constant.MAX_PRODUCT_LIST_DEPTH)
-        link_body = utility.retrieve_link_body(url, True)
-
     @pytest.mark.parametrize("url, is_product_data", [
         (None, False), ("https://www.walmart.com/cp/home/4044", None)])
     def test_raises_TypeError_with_None(self, session, browser,

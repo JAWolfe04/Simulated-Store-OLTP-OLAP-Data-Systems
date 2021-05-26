@@ -356,3 +356,70 @@ class product_utility:
             except common.exceptions.TimeoutException:
                 time.sleep(10)
     
+    def store_product_data(self, product_data):
+        """
+        Stores input product_data in the product database
+
+        Parameters
+        ----------
+        product_data(dict): Dictionary with name, price, brand_name,
+                manufacturer_name, shelf_name, aisle_name and department_name
+
+        Returns
+        -------
+        (int): Product number id for the entered product data
+        """
+        if type(product_data) is not dict:
+            raise TypeError("Provided product data is not a dictionary")
+
+        string_keys = ["name", "brand_name", "manufacturer_name", "shelf_name",
+                       "aisle_name", "department_name"]
+        for key in string_keys:
+            if type(product_data.get(key)) is not str:
+                raise TypeError(
+                    "Provided product data {} is not a string".format(key))
+            if len(product_data.get(key).strip()) == 0:
+                raise ValueError(
+                    "Provided product data {} must contain a name".format(key))
+
+        if type(product_data.get("price")) is not float:
+            raise TypeError("Provided product data price is not a decimal")
+        if product_data.get("price") <= 0:
+            raise ValueError("Provided product price must be greater than 0")
+
+        query = "SELECT shelf_id FROM shelf WHERE shelf_name = %s;"
+        self.database_cursor.execute(query, (product_data.get("shelf_name"),))
+        shelf_id_result = self.database_cursor.fetchall()
+
+        shelf_id = None
+        if len(shelf_id_result) == 0:
+            query = "SELECT department_id FROM department WHERE name = %s;"
+            self.database_cursor.execute(query,
+                                         (product_data.get("department_name"),))
+            dept_id_result = self.database_cursor.fetchall()
+            if len(dept_id_result) == 0:
+                raise ValueError("Provided department name does not exist")
+            
+            dept_id = dept_id_result[0][0]
+            query = ("INSERT INTO shelf(department_id, shelf_name, aisle_name)"
+                     " VALUES (%s, %s, %s);")
+            self.database_cursor.execute(query, (
+                dept_id,
+                product_data.get("shelf_name"),
+                product_data.get("aisle_name")))
+            self.database_connection.commit()
+            shelf_id = self.database_cursor.lastrowid
+        else:
+            shelf_id = shelf_id_result[0][0]
+
+        query = ("INSERT INTO product(shelf_id, product_name, price, "
+                 "brand_name, manufacturer_name) VALUES (%s, %s, %s, %s, %s);")
+        self.database_cursor.execute(
+            query, (shelf_id,
+                    product_data.get("name"),
+                    product_data.get("price"),
+                    product_data.get("brand_name"),
+                    product_data.get("manufacturer_name")))
+        self.database_connection.commit()
+        
+        return self.database_cursor.lastrowid

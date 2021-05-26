@@ -97,35 +97,13 @@ class Test_Integration:
         test_col_names = [col[0] for col in cursor.fetchall()]
         return (dev_col_names, test_col_names)
 
-    @pytest.mark.usefixtures("setup_departments")
-    def test_department_table(self, dev_cursor, cursor):
-        dev_col_names, test_col_names = self.get_queries(
-            dev_cursor, cursor, "DESCRIBE department")
-        assert test_col_names == dev_col_names
-
-    @pytest.mark.usefixtures("setup_departments")
-    def test_departments(self, dev_cursor, cursor):
-        dev_depts, test_depts = self.get_queries(
-            dev_cursor, cursor, "SELECT name FROM department")
-        assert dev_depts == test_depts
-
-    @pytest.mark.usefixtures("setup_jobs")
-    def test_position_table(self, dev_cursor, cursor):
-        dev_col_names, test_col_names = self.get_queries(
-            dev_cursor, cursor, "DESCRIBE job_position")
-        assert test_col_names == dev_col_names
-
-    @pytest.mark.usefixtures("setup_jobs")
-    def test_positions(self, dev_cursor, cursor):
+    @pytest.mark.parametrize("cols, table", [
+        ("name", "department"), ("title", "job_position")])
+    @pytest.mark.usefixtures("setup_departments", "setup_jobs")
+    def test_positions(self, dev_cursor, cursor, cols, table):
         dev_jobs, test_jobs = self.get_queries(
-            dev_cursor, cursor, "SELECT title FROM job_position")
+            dev_cursor, cursor, "SELECT {} FROM {}".format(cols, table))
         assert dev_jobs == test_jobs
-
-    @pytest.mark.usefixtures("setup_locations")
-    def test_location_table(self, dev_cursor, cursor):
-        dev_col_names, test_col_names = self.get_queries(
-            dev_cursor, cursor, "DESCRIBE location")
-        assert test_col_names == dev_col_names
 
     @pytest.mark.usefixtures("setup_locations")
     def test_locations(self, dev_cursor, cursor):
@@ -133,8 +111,13 @@ class Test_Integration:
             dev_cursor, cursor, "SELECT location_id FROM location")
         assert len(dev_locations) == len(test_locations)
 
-    @pytest.mark.usefixtures("setup_employees")
-    def test_employee_table(self, dev_cursor, cursor):
+    @pytest.mark.parametrize("table", [
+        ("shelf"), ("employee"), ("location"), ("job_position"),
+        ("department"), ("product")])
+    @pytest.mark.usefixtures(
+        "setup_departments", "setup_locations", "setup_jobs",
+        "setup_employees", "setup_shelf", "setup_product")
+    def test_tables(self, dev_cursor, cursor, table):
         dev_col_names, test_col_names = self.get_queries(
-            dev_cursor, cursor, "DESCRIBE employee")
+            dev_cursor, cursor, "DESCRIBE {}".format(table))
         assert test_col_names == dev_col_names
