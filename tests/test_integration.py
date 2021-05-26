@@ -3,8 +3,8 @@ import requests
 import time
 
 from bs4 import BeautifulSoup
+
 from src.product.product_utilities import product_utility
-import src.product.constants as product_constant
 from src.employee.constants import RAND_USER_URL
 from tests.employee.constants import MOCK_JSON
 

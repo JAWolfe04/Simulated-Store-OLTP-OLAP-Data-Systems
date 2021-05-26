@@ -3,7 +3,6 @@ import pytest
 from bs4 import BeautifulSoup
 
 from src.product.product_utilities import product_utility
-import src.product.constants as constant
 
 @pytest.mark.retrieve_product_data
 class Test_Retrieve_Product_Data:
@@ -33,26 +32,20 @@ class Test_Retrieve_Product_Data:
           "department_name": "Beauty, Bath and Health"})])
     def test_smoke_returns_expected_data(
             self, session, browser, file_name, expected_data):
-        utility = product_utility(session,
-                                  browser,
-                                  constant.MAX_CATALOG_SIZE,
-                                  constant.MAX_PRODUCT_LIST_DEPTH)
-        utility.department_name = expected_data.get("department_name")
+        utility = product_utility(session, browser)
+        utility.set_department_name(expected_data.get("department_name"))
         product_data = utility.retrieve_product_data(self.get_body(file_name))
         assert product_data == expected_data
 
     @pytest.mark.parametrize("has_body", [(True), (False)])
     def test_raises_TypeError_with_None(self, session, browser, has_body):
-        utility = product_utility(session,
-                                  browser,
-                                  constant.MAX_CATALOG_SIZE,
-                                  constant.MAX_PRODUCT_LIST_DEPTH)
+        utility = product_utility(session, browser)
         with pytest.raises(TypeError):
             if has_body:
                 utility.retrieve_product_data(self.get_body(
                     "tests/product/test_pages/Product_Page.html"))
             else:
-                utility.department_name = "Home and Office"
+                utility.set_department_name("Home and Office")
                 utility.retrieve_product_data(None)
         
     @pytest.mark.parametrize("file_name", [
@@ -79,10 +72,7 @@ class Test_Retrieve_Product_Data:
         #9th test is missing the brand row
         #10th test is missing the brand value
         
-        utility = product_utility(session,
-                                  browser,
-                                  constant.MAX_CATALOG_SIZE,
-                                  constant.MAX_PRODUCT_LIST_DEPTH)
+        utility = product_utility(session, browser)
         with pytest.raises(ValueError):
-            utility.department_name = "Home and Office"
+            utility.set_department_name("Home and Office")
             utility.retrieve_product_data(self.get_body(file_name))

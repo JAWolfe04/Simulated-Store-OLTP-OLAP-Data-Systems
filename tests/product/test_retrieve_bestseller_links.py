@@ -3,7 +3,6 @@ import pytest
 from bs4 import BeautifulSoup
 
 from src.product.product_utilities import product_utility
-import src.product.constants as constant
 
 @pytest.mark.retrieve_bestseller_links
 class Test_Retrieve_Bestseller_Links:
@@ -12,7 +11,7 @@ class Test_Retrieve_Bestseller_Links:
         "https://www.walmart.com/ip/Mainstays-4-Slice-Black-Toaster-Oven-with-Dishwasher-Safe-Rack-Pan-3-Piece/110482692",
         "https://www.walmart.com/ip/BLACK-DECKER-Crisp-N-Bake-Air-Fry-4-Slice-Toaster-Oven-TO1787SS/354341819",
         "https://www.walmart.com/ip/Hamilton-Beach-XL-Convection-Oven-with-Rotisserie/120169727"
-            }
+        }
     
     def get_body(self, file_name):
         with open(file_name, "r", encoding = "utf8") as file:
@@ -27,13 +26,9 @@ class Test_Retrieve_Bestseller_Links:
         self, session, browser, file_name, has_bestsellers):
         # First test runs a normal product list html body with bestsellers
         # Second test runs a normal product list html body without bestsellers
-        utility = product_utility(session,
-                                  browser,
-                                  constant.MAX_CATALOG_SIZE,
-                                  constant.MAX_PRODUCT_LIST_DEPTH)
         product_links = set()
-        utility.retrieve_bestseller_links(self.get_body(file_name),
-                                          product_links)
+        product_utility(session, browser).retrieve_bestseller_links(
+            self.get_body(file_name), product_links)
         expected_links = set()
         if has_bestsellers:
             expected_links = self.best_seller_links
@@ -42,14 +37,10 @@ class Test_Retrieve_Bestseller_Links:
 
     def test_smoke_previously_recorded_links_not_duplicated(self, session,
                                                             browser):
-        utility = product_utility(session,
-                                  browser,
-                                  constant.MAX_CATALOG_SIZE,
-                                  constant.MAX_PRODUCT_LIST_DEPTH)
         product_links = {"https://www.walmart.com/ip/Hamilton-Beach-XL-Convection-Oven-with-Rotisserie/120169727"}
         file_name = "tests/product/test_pages/Product_List_Page.html"
-        utility.retrieve_bestseller_links(self.get_body(file_name),
-                                          product_links)
+        product_utility(session, browser).retrieve_bestseller_links(
+            self.get_body(file_name), product_links)
         assert len(product_links) > 0
         assert product_links == self.best_seller_links
 
@@ -58,15 +49,12 @@ class Test_Retrieve_Bestseller_Links:
         (True, None)])
     def test_raises_TypeError_with_None(self, session, browser,
                                         has_body, product_list):
-        utility = product_utility(session,
-                                  browser,
-                                  constant.MAX_CATALOG_SIZE,
-                                  constant.MAX_PRODUCT_LIST_DEPTH)
+        utility = product_utility(session, browser)
         with pytest.raises(TypeError):
             if has_body:
                 file_name = "tests/product/test_pages/Product_List_Page.html"
-                utility.retrieve_bestseller_links(self.get_body(file_name),
-                                                  product_list)
+                utility.retrieve_bestseller_links(
+                    self.get_body(file_name), product_list)
             else:
                 utility.retrieve_bestseller_links(None, product_list)
 
@@ -80,9 +68,6 @@ class Test_Retrieve_Bestseller_Links:
         # Second test pass a product list html with items with no link
         # Third test passes a page that does not have the required html
         # elements
-        utility = product_utility(session,
-                                  browser,
-                                  constant.MAX_CATALOG_SIZE,
-                                  constant.MAX_PRODUCT_LIST_DEPTH)
         with pytest.raises(ValueError):
-            utility.retrieve_bestseller_links(self.get_body(file_name), set())
+            product_utility(session, browser).retrieve_bestseller_links(
+                self.get_body(file_name), set())

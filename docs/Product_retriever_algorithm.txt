@@ -68,6 +68,7 @@ FUNCTION retrieve_product_catalog
 		SET product_links from the input list of product links
 		IF length of product_links > max catalog size
 			Scramble order of product_links
+			WRITE TO FILE Product_Links.txt with product_links
 		ENDIF
 		SET batch_removal_counter = 0
 		FOR each product_link in product_links up to max catalog size

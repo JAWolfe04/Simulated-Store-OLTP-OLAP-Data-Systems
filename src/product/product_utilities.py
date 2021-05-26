@@ -7,6 +7,8 @@ This module requires 'mysql.connector' to be installed as well as a running
 MySQL database.
 """
 import time
+import random
+from os import path
 
 import mysql.connector
 from bs4 import BeautifulSoup, element
@@ -37,27 +39,14 @@ class product_utility:
     Methods
     -------
     """
-    def __init__(self,
-                 database_connection,
-                 browser,
-                 max_catalog_size,
-                 max_product_list_depth):
+    def __init__(self, database_connection, browser):
         """
         Parameters
         ----------
         database_connection (mysql.connector.connection.MySQLConnection):
             Connection to the working business database
-        database_cursor (mysql.connector.cursor.MySQLCursor): Cursor for
-            entering data to the working business database
         browser (selenium.webdriver.chrome.webdriver.WebDriver): Webdriver
             to emulate a browser for fetching data from Walmart.com
-        max_catalog_size (int): Indicates the maximum size of the product
-            catalog, must be greater than 0
-        max_product_list_depth (int): Indicates the maximum number of pages
-            to cycle through a product list in Walmart.com to find products,
-            must be greater than 0
-        department_name (str): String representing the currently active
-            department item retrieval
         """
 
         if (type(database_connection) is not
@@ -66,23 +55,75 @@ class product_utility:
         elif (type(browser) is not
               webdriver.chrome.webdriver.WebDriver):
             raise TypeError("Provided browser is wrong type")
-        elif type(max_catalog_size) is not int:
-            raise TypeError("Provided max catalog size is not a number")
-        elif type(max_product_list_depth) is not int:
-            raise TypeError("Provided max product list depth is not a number")
 
-        if max_catalog_size < 1:
-            raise ValueError("Provided max catalog size cannot be less than 1")
-        elif max_product_list_depth < 1:
-            raise ValueError("Provided max product list depth cannot be less "
-                             "than 1")
-        
         self.database_connection = database_connection
         self.database_cursor = database_connection.cursor()
         self.browser = browser
-        self.max_catalog_size = max_catalog_size
-        self.max_product_list_depth = max_product_list_depth
+        self.max_catalog_size = 1000
+        self.max_product_list_depth = 3
         self.department_name = None
+        self.product_links_file_name = "Product_Links.txt"
+        self.previous_links_file_name = "Previous_Links.txt"
+
+    def set_max_catalog_size(self, size):
+        if type(size) is not int:
+            raise TypeError("Provided max catalog size is not a number")
+        elif size < 1:
+            raise ValueError("Provided max catalog size cannot be less than 1")
+        self.max_catalog_size = size
+
+    def get_max_catalog_size(self):
+        return self.max_catalog_size
+        
+    def set_max_product_list_depth(self, depth):
+        if type(depth) is not int:
+            raise TypeError("Provided max product list depth is not a number")
+
+        elif depth < 1:
+            raise ValueError("Provided max product list depth cannot be less "
+                             "than 1")
+        self.max_product_list_depth = depth
+
+    def get_max_product_list_depth(self):
+        return self.max_product_list_depth
+
+    def set_current_department_name(self, dept_name):
+        if type(dept_name) is not str:
+            raise TypeError("Provided department name is not a string")
+        elif len(dept_name.strip()) == 0:
+            raise ValueError("Provided department name must contain a name")
+        query = "SELECT department_id FROM department WHERE name = %s"
+        self.database_cursor.execute(query, (dept_name,))
+        if len(self.database_cursor.fetchall()) == 0:
+            raise ValueError("Provided department does not exist")
+        self.department_name = dept_name
+
+    def get_current_department_name(self):
+        return self.department_name
+
+    def set_product_links_file_name(self, file_name):
+        if type(file_name) is not str:
+            raise TypeError("Provided product links file name is not a string")
+        elif len(file_name.strip()) == 0:
+            raise ValueError("Provided product links file department name "
+                             "must contain a name")
+        
+        self.product_links_file_name = file_name
+
+    def get_product_links_file_name(self):
+        return self.product_links_file_name
+
+    def set_previous_links_file_name(self, file_name):
+        if type(file_name) is not str:
+            raise TypeError("Provided previous links file name is not a string")
+        elif len(file_name.strip()) == 0:
+            raise ValueError("Provided previous links file department name "
+                             "must contain a name")
+        
+        self.previous_links_file_name = file_name
+
+    def get_previous_links_file_name(self):
+        return self.previous_links_file_name
 
     def retrieve_category_links(self, body):
         """
@@ -423,3 +464,38 @@ class product_utility:
         self.database_connection.commit()
         
         return self.database_cursor.lastrowid
+
+    def retrieve_product_catalog(self, product_links):
+        """
+        Takes a list of product links, retrieves the product data
+        for each link then stores the product data in a product database.
+        The number of products is limited by the max_catalog_size specified
+        for the class. Remaining product links to be added are entered in the
+        product_links_file_name for the class.
+    
+        Parameters
+        ----------
+        product_links (list): List of product links
+        """
+        catalog_size = len(product_links)
+        if len(product_links) > self.max_catalog_size:
+            catalog_size = self.max_catalog_size
+            random.shuffle(product_links)
+            with open(self.product_links_file_name, "w") as file:
+                for link in product_links:
+                    file.write("{}".format(link))
+        batch_removal_counter = 0
+        for idx in range(0, catalog_size):
+            page_body = self.retrieve_link_body(product_links[idx])
+            product_data = self.retrieve_product_data(page_body)
+            self.store_product_data(product_data)
+            batch_removal_counter += 1
+            if batch_removal_counter == 40:
+                temp_product_links = []
+                if path.isfile(self.product_links_file_name):
+                    with open(self.product_links_file_name, "r") as file:
+                        temp_product_links = file.readlines()
+                with open(self.product_links_file_name, "w") as file:
+                    for link in temp_product_links[40:]:
+                        file.write("{}".format(link))
+                batch_removal_counter = 0

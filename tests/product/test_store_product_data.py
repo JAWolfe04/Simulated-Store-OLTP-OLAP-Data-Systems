@@ -1,8 +1,8 @@
 import pytest
 
 from mysql.connector import errors
+
 from src.product.product_utilities import product_utility
-import src.product.constants as constant
 
 @pytest.mark.store_product_data
 @pytest.mark.usefixtures("sim_product_data", "setup_product",
@@ -10,12 +10,8 @@ import src.product.constants as constant
 class Test_Store_Product_Data:        
     def test_enters_data_into_db(
             self, session, browser, cursor, sim_product_data):
-        utility = product_utility(session,
-                                  browser,
-                                  constant.MAX_CATALOG_SIZE,
-                                  constant.MAX_PRODUCT_LIST_DEPTH)
         data = sim_product_data
-        product_id = utility.store_product_data(data)
+        product_id = product_utility(session, browser).store_product_data(data)
         query = ("SELECT product_name, price, brand_name, manufacturer_name, "
                      "shelf_name, aisle_name, department.name "
                  "FROM product AS product "
@@ -36,10 +32,6 @@ class Test_Store_Product_Data:
 
     def test_uses_existing_shelf(
         self, session, browser, cursor, sim_product_data):
-        utility = product_utility(session,
-                                  browser,
-                                  constant.MAX_CATALOG_SIZE,
-                                  constant.MAX_PRODUCT_LIST_DEPTH)
         data = sim_product_data
         query = "SELECT department_id FROM department WHERE name = %s;"
         cursor.execute(query,(data.get("department_name"),))
@@ -50,42 +42,31 @@ class Test_Store_Product_Data:
                                data.get("shelf_name"),
                                data.get("aisle_name")))
         session.commit()
-        product_id = utility.store_product_data(data)
+        product_id = product_utility(session, browser).store_product_data(data)
         cursor.execute("SELECT shelf_id FROM shelf")
         assert cursor.fetchall()[0][0] == 1
 
     def test_raises_IntegrityError_with_repeat_products(
         self, session, browser, sim_product_data):
-        utility = product_utility(session,
-                                  browser,
-                                  constant.MAX_CATALOG_SIZE,
-                                  constant.MAX_PRODUCT_LIST_DEPTH)
+        utility = product_utility(session, browser)
         data = sim_product_data
         utility.store_product_data(data)
         with pytest.raises(errors.IntegrityError):
             utility.store_product_data(data)
 
     def test_raises_TypeError_with_None(self, session, browser):
-        utility = product_utility(session,
-                                  browser,
-                                  constant.MAX_CATALOG_SIZE,
-                                  constant.MAX_PRODUCT_LIST_DEPTH)
         with pytest.raises(TypeError):
-            utility.store_product_data(None)
+            product_utility(session, browser).store_product_data(None)
 
     @pytest.mark.parametrize("key", [
         ("name"), ("price"), ("brand_name"), ("manufacturer_name"),
         ("shelf_name"), ("aisle_name"), ("department_name")])
     def test_raises_TypeError_with_None_product_values(
             self, session, browser, key, sim_product_data):
-        utility = product_utility(session,
-                                  browser,
-                                  constant.MAX_CATALOG_SIZE,
-                                  constant.MAX_PRODUCT_LIST_DEPTH)
         data = sim_product_data
         data[key] = None
         with pytest.raises(TypeError):
-            utility.store_product_data(data)
+            product_utility(session, browser).store_product_data(data)
 
     @pytest.mark.parametrize("data_key, product_data", [
         ("name", " "), ("price", 0.00), ("brand_name", " "),
@@ -94,11 +75,7 @@ class Test_Store_Product_Data:
         ("department_name", " "), ("department_name", "No Department")])
     def test_raises_ValueError_with_undesired_input(
             self, session, browser, sim_product_data, data_key, product_data):
-        utility = product_utility(session,
-                                  browser,
-                                  constant.MAX_CATALOG_SIZE,
-                                  constant.MAX_PRODUCT_LIST_DEPTH)
         data = sim_product_data
         data[data_key] = product_data
         with pytest.raises(ValueError):
-            utility.store_product_data(data)
+            product_utility(session, browser).store_product_data(data)

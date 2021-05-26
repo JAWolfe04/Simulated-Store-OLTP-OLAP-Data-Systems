@@ -3,7 +3,6 @@ import pytest
 from bs4 import BeautifulSoup
 
 from src.product.product_utilities import product_utility
-import src.product.constants as constant
 
 @pytest.mark.retrieve_category_links
 class Test_Retrieve_Category_Links:
@@ -34,10 +33,7 @@ class Test_Retrieve_Category_Links:
         # links: one with the 'https://www.walmart.com' prefix missing,
         # another with the 'https://www.' prefix missing and another with an
         # empty link
-        utility = product_utility(session,
-                                  browser,
-                                  constant.MAX_CATALOG_SIZE,
-                                  constant.MAX_PRODUCT_LIST_DEPTH)
+        utility = product_utility(session, browser)
         with open(file_name, "r", encoding="utf8") as file:
             category_html = file.read()
             page_soup = BeautifulSoup(category_html, 'html.parser')
@@ -48,12 +44,8 @@ class Test_Retrieve_Category_Links:
                 assert returned_links == self.category_links
 
     def test_raises_TypeError_with_None(self, session, browser):
-        utility = product_utility(session,
-                                  browser,
-                                  constant.MAX_CATALOG_SIZE,
-                                  constant.MAX_PRODUCT_LIST_DEPTH)
         with pytest.raises(TypeError):
-            utility.retrieve_category_links(None)
+            product_utility(session, browser).retrieve_category_links(None)
 
     @pytest.mark.parametrize("file_name", [
         ("tests/product/test_pages/Category_Page_Empty_Body.html"),
@@ -62,10 +54,7 @@ class Test_Retrieve_Category_Links:
                                                     browser, file_name):
         # First test passes a category html with an empty body
         # Second test passes a category html with the category div removed
-        utility = product_utility(session,
-                                  browser,
-                                  constant.MAX_CATALOG_SIZE,
-                                  constant.MAX_PRODUCT_LIST_DEPTH)
+        utility = product_utility(session, browser)
         with open(file_name, "r", encoding="utf8") as file:
             category_html = file.read()
             page_soup = BeautifulSoup(category_html, 'html.parser')

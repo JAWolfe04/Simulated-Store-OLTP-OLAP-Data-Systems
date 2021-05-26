@@ -1,7 +1,6 @@
 import pytest
 
 from src.product.product_utilities import product_utility
-import src.product.constants as constant
 
 @pytest.mark.retrieve_link_body
 class Test_Retrieve_Link_Body:
@@ -10,10 +9,7 @@ class Test_Retrieve_Link_Body:
         ("https://www.walmart.com/cp/home/4044"),
         ("https://www.walmart.com/cp/bath-body/1071969")])
     def test_returns_category_body(self, browser, session, url):
-        utility = product_utility(session,
-                                  browser,
-                                  constant.MAX_CATALOG_SIZE,
-                                  constant.MAX_PRODUCT_LIST_DEPTH)
+        utility = product_utility(session, browser)
         link_body = utility.retrieve_link_body(url)
         returned_links = utility.retrieve_category_links(link_body)
         assert len(returned_links) > 0
@@ -25,10 +21,7 @@ class Test_Retrieve_Link_Body:
          3)
         ])
     def test_returns_product_list_body(self, browser, session, url, count):
-        utility = product_utility(session,
-                                  browser,
-                                  constant.MAX_CATALOG_SIZE,
-                                  constant.MAX_PRODUCT_LIST_DEPTH)
+        utility = product_utility(session, browser)
         link_body = utility.retrieve_link_body(url)
         returned_links = set()
         utility.retrieve_bestseller_links(link_body, returned_links)
@@ -40,11 +33,8 @@ class Test_Retrieve_Link_Body:
         ("https://www.walmart.com/ip/Olay-Moisture-Ribbons-Plus-Body-Wash-Shea-and-Blue-Lotus-18-fl-oz/724204321")
         ])
     def test_returns_product_data_body(self, browser, session, url):
-        utility = product_utility(session,
-                                  browser,
-                                  constant.MAX_CATALOG_SIZE,
-                                  constant.MAX_PRODUCT_LIST_DEPTH)
-        utility.department_name = "Food"
+        utility = product_utility(session, browser)
+        utility.set_department_name("Food")
         link_body = utility.retrieve_link_body(url, True)
         product_data = utility.retrieve_product_data(link_body)
         assert len(product_data["name"]) > 0
@@ -59,10 +49,7 @@ class Test_Retrieve_Link_Body:
         (None, False), ("https://www.walmart.com/cp/home/4044", None)])
     def test_raises_TypeError_with_None(self, session, browser,
                                         url, is_product_data):
-        utility = product_utility(session,
-                                  browser,
-                                  constant.MAX_CATALOG_SIZE,
-                                  constant.MAX_PRODUCT_LIST_DEPTH)
+        utility = product_utility(session, browser)
         with pytest.raises(TypeError):
             utility.retrieve_link_body(url, is_product_data)
 
@@ -71,9 +58,5 @@ class Test_Retrieve_Link_Body:
         ])
     def test_raises_ValueError_with_page_not_found(self, browser, session,
                                                     url):
-        utility = product_utility(session,
-                                  browser,
-                                  constant.MAX_CATALOG_SIZE,
-                                  constant.MAX_PRODUCT_LIST_DEPTH)
         with pytest.raises(ValueError):
-            utility.retrieve_link_body(url)
+            product_utility(session, browser).retrieve_link_body(url)
