@@ -223,12 +223,14 @@ class product_utility:
             if flag.text == "Best Seller":
                 flag_li_parent = flag.find_parent("li")
                 if flag_li_parent is None:
-                    raise ValueError("Best Seller flag does not have the "
+                    print("Warning: Best Seller flag does not have the "
                                      "expected parent format")
+                    continue
                 link = flag_li_parent.a
                 if (link is None or " ".join(link["class"])
                     != "search-result-productimage gridview display-block"):
-                    raise ValueError("Unable to find expected link to flag")
+                    print("Warning: Unable to find expected link to flag")
+                    continue
                 product_links.add(link.get("href"))
         
     def retrieve_product_data(self, body):
@@ -499,3 +501,57 @@ class product_utility:
                     for link in temp_product_links[40:]:
                         file.write("{}".format(link))
                 batch_removal_counter = 0
+
+    def retrieve_product_links(
+        self, link, previous_links, prev_product_lists, product_links):
+        """
+        Collects links of bestseller products from all subcategories following
+        the provided link without revisiting categories
+
+        Parameters
+        ----------
+        link (str): URL to be retrieved
+        previous_links (set): Set of previously visited pages
+        prev_product_lists (set): Set of previously visited product list links
+        product_links (set): Set of product links
+        """
+        if type(link) is not str:
+            raise TypeError("Provided link is not a string")
+        elif len(link.strip()) == 0:
+            raise ValueError("Provided link must contain a link")
+        elif type(previous_links) is not set:
+            raise TypeError("Provided previous_links is not a set")
+        elif type(prev_product_lists) is not set:
+            raise TypeError("Provided prev_product_lists is not a set")
+        elif type(product_links) is not set:
+            raise TypeError("Provided product_links is not a set")
+
+        previous_links.add(link)
+        page_body = self.retrieve_link_body(link)
+        prod_list_tag = page_body.find("div",{"class":"search-product-result"})
+        try:
+            if prod_list_tag is not None:
+                if link not in prev_product_lists:
+                    prev_product_lists.add(link)
+                    self.retrieve_bestseller_links(page_body, product_links)
+                    for page in range(2, self.get_max_product_list_depth() + 1):
+                        page_link = link + "&page={}".format(page)
+                        prod_body = self.retrieve_link_body(page_link)
+                        self.retrieve_bestseller_links(prod_body, product_links)
+                        with open(self.get_product_links_file_name(),
+                                  "w") as file:
+                            file.writelines(product_links)
+                        with open(self.get_previous_links_file_name(),
+                                  "w") as file:
+                            file.writelines(prev_product_lists)
+            else:
+                category_links = self.retrieve_category_links(page_body)
+                for category_link in category_links:
+                    if category_link not in previous_links:
+                        self.retrieve_product_links(category_link,
+                                                    previous_links,
+                                                    prev_product_lists,
+                                                    product_links)
+        except ValueError as error:
+            print("Warning: {}".format(error))
+            

@@ -18,13 +18,49 @@ class Test_Integration:
         assert response_keys == mock_keys
 
     @pytest.mark.parametrize("url", [
+        ("https://www.walmart.com/cp/home/4044"),
+        ("https://www.walmart.com/cp/bath-body/1071969")])
+    def test_returns_category_body(self, browser, session, url):
+        utility = product_utility(session, browser)
+        link_body = utility.retrieve_link_body(url)
+        category_header = link_body.find("h2", text = "Shop by Category")
+        if category_header is None:
+            category_header = link_body.find("h2", class_ = "header-title-5DR")
+        assert category_header is not None
+
+    @pytest.mark.parametrize("url, count", [
+        ("https://www.walmart.com/browse/home/toaster-ovens/4044_90548_90546_90774_3312544",
+         4),
+        ("https://www.walmart.com/browse/bath-body/bar-soap/1005862_1071969_4735846",
+         3)
+        ])
+    def test_returns_product_list_body(self, browser, session, url, count):
+        utility = product_utility(session, browser)
+        link_body = utility.retrieve_link_body(url)
+        product_list = link_body.find("div",{"class":"search-product-result"})
+        assert product_list is not None
+        
+
+    @pytest.mark.usefixtures("setup_departments")
+    @pytest.mark.parametrize("url", [
+        ("https://www.walmart.com/ip/Cuisinart-Toaster-Oven-Broilers-Air-Fryer/918908248?wpa_bd=&wpa_pg_seller_id=F55CDC31AB754BB68FE0B39041159D63&wpa_ref_id=wpaqs:40esHkIw5wemZ_brKHrfbg_s-VtEREr1YkwETgaLxcpIYPgQAsp6jmUmkwzZFwGZ9YYJoTUwhNTE3zkULQJUA-rXP11I4yVWE2K4n_1Bj7jrP2u4f2IHpFqKpTV7S9Bv3aFZCMVRxXNGYPCn89XFvf0PXX-NyeepYdxyKh4av-GAOqYiHyUzHCSOiftW_9nClNjY_3WoYkVJIUxhnI3EXQ&wpa_tag=&wpa_aux_info=&wpa_pos=2&wpa_plmt=1145x1145_T-C-IG_TI_1-6_HL-INGRID-GRID-NY&wpa_aduid=8dde032f-b5f2-4db7-ba85-f3a1ffc2577e&wpa_pg=browse&wpa_pg_id=4044_90548_90546_90774_3312544&wpa_st=__searchterms__&wpa_tax=4044_90548_90546_90774_3312544&wpa_bucket=__bkt__"),
+        ("https://www.walmart.com/ip/BLACK-DECKER-Crisp-N-Bake-Air-Fry-4-Slice-Toaster-Oven-TO1787SS/354341819"),
+        ("https://www.walmart.com/ip/Olay-Moisture-Ribbons-Plus-Body-Wash-Shea-and-Blue-Lotus-18-fl-oz/724204321")
+        ])
+    def test_returns_product_data_body(self, browser, session, url):
+        utility = product_utility(session, browser)
+        # The department name is not relevant
+        utility.set_current_department_name("Food")
+        link_body = utility.retrieve_link_body(url, True)
+        product_name = link_body.select_one(
+            "h1.prod-ProductTitle.prod-productTitle-buyBox.font-bold")
+        assert product_name is not None
+
+    @pytest.mark.parametrize("url", [
         ("https://www.walmart.com/ip/Gluten-Free-Cinnamon-Buns-Mini-Glazed-Rolls-Breakfast-Pastry-Rugelach-Pastries-Croissants-Dairy-Nut-Soy-Kosher-7-oz-Katz/169182769"),
         ("https://www.walmart.com/ip/Maybelline-Color-Sensational-Shine-Compulsion-Lipstick-Makeup-Taupe-Seduction-0-1-oz/607432038")])
     def test_walmart_product_data_returns_data(self, session, url, browser):
-        utility = product_utility(session,
-                                  browser,
-                                  product_constant.MAX_CATALOG_SIZE,
-                                  product_constant.MAX_PRODUCT_LIST_DEPTH)
+        utility = product_utility(session, browser)
         utility.department_name = "Food"
         browser.get(url)
         time.sleep(3)
@@ -47,36 +83,26 @@ class Test_Integration:
         assert len(product_data["aisle_name"]) > 0
         assert len(product_data["department_name"]) > 0
 
-    @pytest.mark.parametrize("url, count", [
-        ("https://www.walmart.com/browse/food/baking-ingredients/976759_976780_9959366?cat_id=976759_976780_9959366_5053287",
-         4),
-        ("https://www.walmart.com/browse/health/allergy-and-sinus/976760_3771182",
-         8),
-        ("https://www.walmart.com/browse/office-supplies/notebooks-pads/1229749_4796182",
-         1)])
-    def test_walmart_product_list_returns_links(self, session,
-                                                url, count, browser):
-        utility = product_utility(session,
-                                  browser,
-                                  product_constant.MAX_CATALOG_SIZE,
-                                  product_constant.MAX_PRODUCT_LIST_DEPTH)
+    @pytest.mark.parametrize("url", [
+        ("https://www.walmart.com/browse/food/baking-ingredients/976759_976780_9959366?cat_id=976759_976780_9959366_5053287"),
+        ("https://www.walmart.com/browse/health/allergy-and-sinus/976760_3771182")
+         ])
+    def test_walmart_product_list_returns_links(self, session, url, browser):
+        utility = product_utility(session, browser)
         browser.get(url)
         time.sleep(3)
         products_html = browser.page_source
         soupPage = BeautifulSoup(products_html, 'html.parser')
         returned_links = set()
         utility.retrieve_bestseller_links(soupPage.body, returned_links)
-        assert len(returned_links) == count
+        assert len(returned_links) > 0
 
     @pytest.mark.parametrize("url", [
         ("https://www.walmart.com/cp/bath-body/1071969"),
         ("https://www.walmart.com/cp/furniture/103150"),
         ("https://www.walmart.com/cp/home/4044")])
     def test_walmart_categories_returns_links(self, session, url, browser):
-        utility = product_utility(session,
-                                  browser,
-                                  product_constant.MAX_CATALOG_SIZE,
-                                  product_constant.MAX_PRODUCT_LIST_DEPTH)
+        utility = product_utility(session, browser)
         browser.get(url)
         time.sleep(3)
         category_html = browser.page_source

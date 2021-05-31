@@ -33,7 +33,8 @@ class Test_Retrieve_Product_Data:
     def test_smoke_returns_expected_data(
             self, session, browser, file_name, expected_data):
         utility = product_utility(session, browser)
-        utility.set_department_name(expected_data.get("department_name"))
+        utility.set_current_department_name(
+            expected_data.get("department_name"))
         product_data = utility.retrieve_product_data(self.get_body(file_name))
         assert product_data == expected_data
 
@@ -45,7 +46,7 @@ class Test_Retrieve_Product_Data:
                 utility.retrieve_product_data(self.get_body(
                     "tests/product/test_pages/Product_Page.html"))
             else:
-                utility.set_department_name("Home and Office")
+                utility.set_current_department_name("Home and Office")
                 utility.retrieve_product_data(None)
         
     @pytest.mark.parametrize("file_name", [
@@ -74,5 +75,5 @@ class Test_Retrieve_Product_Data:
         
         utility = product_utility(session, browser)
         with pytest.raises(ValueError):
-            utility.set_department_name("Home and Office")
+            utility.set_current_department_name("Home and Office")
             utility.retrieve_product_data(self.get_body(file_name))

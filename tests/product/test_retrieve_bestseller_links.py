@@ -44,6 +44,25 @@ class Test_Retrieve_Bestseller_Links:
         assert len(product_links) > 0
         assert product_links == self.best_seller_links
 
+    def test_smoke_prints_warning_with_flag_without_links(
+            self, session, browser, capsys):
+        file_name = "tests/product/test_pages/Product_List_Page_No_Links.html"
+        product_utility(session, browser).retrieve_bestseller_links(
+            self.get_body(file_name), set())
+        message = "Warning: Unable to find expected link to flag\n"
+        expected = ""
+        for _ in range(0, 4): expected += message
+        assert capsys.readouterr().out == expected
+
+    def test_smoke_prints_warning_with_bad_format_flag(
+            self, session, browser, capsys):
+        file_name = "tests/product/test_pages/Product_List_Page_Bad_Flag.html"
+        product_utility(session, browser).retrieve_bestseller_links(
+            self.get_body(file_name), set())
+        expected = ("Warning: Best Seller flag does not have the expected "
+                   "parent format\n")
+        assert capsys.readouterr().out == expected
+
     @pytest.mark.parametrize("has_body, product_list", [
         (False, set()),
         (True, None)])
@@ -60,14 +79,11 @@ class Test_Retrieve_Bestseller_Links:
 
     @pytest.mark.parametrize("file_name", [
         ("tests/product/test_pages/Product_List_Page_Empty_Body.html"),
-        ("tests/product/test_pages/Product_List_Page_No_Links.html"),
         ("tests/product/test_pages/Category_Page.html")])
     def test_raises_ValueError_with_bad_content(self, session,
                                                 browser, file_name):
         # First test passes an empty product list html body
-        # Second test pass a product list html with items with no link
-        # Third test passes a page that does not have the required html
-        # elements
+        # Second test passes the wrong page type
         with pytest.raises(ValueError):
             product_utility(session, browser).retrieve_bestseller_links(
                 self.get_body(file_name), set())
