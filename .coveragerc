@@ -1,0 +1,9 @@
+[run]
+omit = 
+	# Omit files not containing logic
+	#Omit init files
+	*\__init__.py
+	#Omit main call for employee class
+	src\employee\employee_initializer.py
+	#Omit main call for product class
+	src\product\product_retriever.py

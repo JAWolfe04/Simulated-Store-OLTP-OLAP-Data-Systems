@@ -554,4 +554,36 @@ class product_utility:
                                                     product_links)
         except ValueError as error:
             print("Warning: {}".format(error))
+
+    def fill_product_catalog(self, dept_list):
+        """
+        Populates a product database with bestselling products from Walmart
+
+        Parameters
+        ----------
+        dept_list (dict): List of Walmart product department links
+        """
+        if type(dept_list) is not dict:
+            raise TypeError("Provided department list is not a dictionary")
+        
+        previous_links = set()
+        prev_product_lists = set()
+        product_links = set()
+        
+        if path.isfile(self.get_product_links_file_name()):
+            with open(self.get_product_links_file_name(), "r") as file:
+                for line in file.readlines():
+                    product_links.add(line.strip())
+                
+        if path.isfile(self.get_previous_links_file_name()):
+            with open(self.get_previous_links_file_name(), "r") as file:
+                for line in file.readlines():
+                    prev_product_lists.add(line.strip())
+                
+        for dept_link in dept_list.keys():
+            self.set_current_department_name(dept_list.get(dept_link))
+            self.retrieve_product_links(
+                dept_link, previous_links, prev_product_lists, product_links)
+            
+        self.retrieve_product_catalog(product_links)
             
