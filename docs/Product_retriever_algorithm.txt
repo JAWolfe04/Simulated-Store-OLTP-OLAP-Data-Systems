@@ -21,13 +21,13 @@ FUNCTION fill_product_catalog
 		SET dept_links from the input list of department links
 		SET product_links as an empty list
 		SET previous_links as an empty list
-		SET previous_product_lists as an empty list
+		SET finished_links as an empty list
 		READ FROM FILE Product_Links.txt RETURN product_links
-		READ FROM FILE Previous_Links.txt RETURN previous_product_lists
+		READ FROM FILE Previous_Links.txt RETURN finished_links
 		FOR each dept_link in dept_links
 			SET department_name for the class performing the data retrieval
-			CALL retrieve_product_links with dept_link, previous_links, previous_product_lists, product_links		
-		CALL retrieve_product_catalog with product_links
+			CALL retrieve_product_links with dept_link, previous_links, finished_links, product_links		
+			CALL retrieve_product_catalog with product_links
 			 
 	Pass Out: Nothing
 ENDFUNCTION
@@ -37,28 +37,28 @@ FUNCTION retrieve_product_links
 	
 		SET page_link from the input page link
 		SET previous_links from the input previously visited links
-		SET previous_product_lists from input previous product lists
+		SET finished_links from input previous product lists
 		SET product_links from the input product links
 		ADD page_link to previous_links
 		CALL retrieve_link_body with product_link RETURN link_body
 		IF link_body contains a product list
-			IF page_link is not in previous_product_lists
-				ADD page_link to previous_product_lists
+			IF page_link is not in finished_links
 				CALL retrieve_bestseller_links with link_body RETURNS product_links
 				FOR each indicated level of page depth beginning with the second page
 					SET page_depth_link from page_link and the current level
 					CALL retrieve_link_body with page_depth_link RETURN product_list_body
 					CALL retrieve_bestseller_links with product_list_body RETURNS product_links
 				WRITE TO FILE Product_Links.txt with product_links
-				WRITE TO FILE Previous_Links.txt with previous_product_lists
 			ENDIF
 		ELSE
 			CALL retrieve_category_links with link_body RETURNS category_links
 			FOR each link in category_links
-				IF link is not in previous_links
+				IF link is not in previous_links and link is not in finished_links
 					CALL retrieve_product_links with link, previous_links, product_links
 				ENDIF
 		ENDIF
+		ADD page_link to finished_links
+		APPEND TO FILE Previous_Links.txt with page_link
 		
 	Pass out: Nothing
 ENDFUNCTION

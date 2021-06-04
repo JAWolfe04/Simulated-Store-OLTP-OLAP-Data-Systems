@@ -10,18 +10,20 @@ This module contains the following functions:
 """
 
 import mysql.connector
+from selenium import webdriver
 
 from src.product.product_utilities import product_utility
-import src.product.constants as constant
 from src import settings
 
 def main():
-    dept_links = ["https://www.walmart.com/cp/home/4044",
-                  "https://www.walmart.com/cp/office/1229749",
-                  "https://www.walmart.com/cp/beauty/1085666",
-                  "https://www.walmart.com/cp/health/976760",
-                  "https://www.walmart.com/cp/food/976759",
-                  "https://www.walmart.com/cp/bath-body/1071969"]
+    dept_links = {
+        #"https://www.walmart.com/cp/food/976759": "Food",
+        #"https://www.walmart.com/cp/beauty/1085666": "Beauty, Bath and Health",
+        #"https://www.walmart.com/cp/health/976760": "Beauty, Bath and Health",
+        #"https://www.walmart.com/cp/home/4044": "Home and Office",
+        #"https://www.walmart.com/cp/office/1229749": "Home and Office",
+        #"https://www.walmart.com/cp/bath-body/1071969":"Beauty, Bath and Health"
+        }
     
     mydb = mysql.connector.connect(
           host = settings.OLTP_HOST,
@@ -34,12 +36,13 @@ def main():
     browser = webdriver.Chrome(
             executable_path = "C:\\WebDriver\\bin\\chromedriver.exe")
 
-    print("Retrieving {} products' data...").format(constant.MAX_CATALOG_SIZE)
+    print("Retrieving products' data...")
     utility = product_utility(mydb, browser)
+    utility.set_max_catalog_size(3000)
     utility.fill_product_catalog(dept_links)
     print("Finished retrieving product data")
 
-    driver.close()
+    browser.close()
 
 if __name__ == "__main__":
     main()

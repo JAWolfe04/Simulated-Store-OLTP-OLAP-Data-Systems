@@ -164,8 +164,8 @@ def setup_product(session, cursor, setup_shelf):
     cursor.execute("""CREATE TABLE product (
                         product_id int NOT NULL AUTO_INCREMENT,
                         shelf_id int NOT NULL,
-                        product_name varchar(100) NOT NULL,
-                        price decimal(10,0) NOT NULL,
+                        product_name varchar(200) NOT NULL,
+                        price decimal(6,2) NOT NULL,
                         brand_name varchar(100) NOT NULL,
                         manufacturer_name varchar(100) NOT NULL,
                         PRIMARY KEY (product_id),

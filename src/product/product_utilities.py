@@ -14,6 +14,8 @@ import mysql.connector
 from bs4 import BeautifulSoup, element
 from selenium import webdriver, common
 
+from src import settings
+
 class product_utility:
     """
     A class for manipulating product data the Simulated Superstore data system
@@ -48,7 +50,8 @@ class product_utility:
         browser (selenium.webdriver.chrome.webdriver.WebDriver): Webdriver
             to emulate a browser for fetching data from Walmart.com
         """
-
+        if settings.STAGE == "prod":
+            print("Initializing class")
         if (type(database_connection) is not
             mysql.connector.connection.MySQLConnection):
             raise TypeError("Provided connection is wrong type")
@@ -62,8 +65,8 @@ class product_utility:
         self.max_catalog_size = 1000
         self.max_product_list_depth = 3
         self.department_name = None
-        self.product_links_file_name = "Product_Links.txt"
-        self.previous_links_file_name = "Previous_Links.txt"
+        self.product_links_file_name = "data//Product_Links.txt"
+        self.finished_links_file_name = "data//Previous_Links.txt"
 
     def set_max_catalog_size(self, size):
         if type(size) is not int:
@@ -113,17 +116,17 @@ class product_utility:
     def get_product_links_file_name(self):
         return self.product_links_file_name
 
-    def set_previous_links_file_name(self, file_name):
+    def set_finished_links_file_name(self, file_name):
         if type(file_name) is not str:
             raise TypeError("Provided previous links file name is not a string")
         elif len(file_name.strip()) == 0:
             raise ValueError("Provided previous links file department name "
                              "must contain a name")
         
-        self.previous_links_file_name = file_name
+        self.finished_links_file_name = file_name
 
-    def get_previous_links_file_name(self):
-        return self.previous_links_file_name
+    def get_finished_links_file_name(self):
+        return self.finished_links_file_name
 
     def retrieve_category_links(self, body):
         """
@@ -144,6 +147,8 @@ class product_utility:
         # The most characteristic part of the category list is the
         # shop by heading, so it is probably best to start therre
         category_header = body.find("h2", text = "Shop by Category")
+        if category_header is None:
+            category_header = body.find("h2", text = "Shop by category")
 
         # The heading can occasionally take the for of 'Shop X' category but
         # this have the following class
@@ -156,24 +161,38 @@ class product_utility:
         # From the Shop by element, it has an ancester that has 'featured'
         # in its class name
         category_ancestor = category_header.parent
-        while("featured" not in "".join(category_ancestor['class']).lower()):
+        is_Featured = True
+        while(True):
+            ancestor_class = category_ancestor.get("class")
+            if ancestor_class is None:
+                category_ancestor = None
+                break
+            
+            if "featured" in ".".join(ancestor_class).lower():
+                break
+            
+            if "curated" in ".".join(ancestor_class).lower():
+                is_Featured = False
+                break
+                
             category_ancestor = category_ancestor.parent
 
-        # The second child divider of the featured class divider contains
+        if category_ancestor is None:
+            raise ValueError("Provided body does not follow expected format")
+
+        # The second child divider of the ancestor class divider contains
         # children with the links for each category
         category_section = None
-        div_counter = 0
-        for sibling in category_ancestor.children:
-            if sibling.name == "div":
-                if div_counter == 1:
-                    category_section = sibling
-                    break
-                else:
-                    div_counter += 1
+        child_divs = category_ancestor.find_all("div", recursive = False)
+        if child_divs is not None and len(child_divs) > 1:
+            category_section = child_divs[1]
 
         if category_section is None:
             raise ValueError("Provided body does not contain a category "
                              "section")
+
+        if not is_Featured:
+            category_section = category_section.ul
         
         category_links = []
         for category in category_section.children:
@@ -231,7 +250,17 @@ class product_utility:
                     != "search-result-productimage gridview display-block"):
                     print("Warning: Unable to find expected link to flag")
                     continue
-                product_links.add(link.get("href"))
+                
+                prod_link = link.get("href")
+                ext_link_idx = prod_link.find("?")
+                if ext_link_idx != -1:
+                    prod_link = prod_link[:ext_link_idx]
+                    
+                if prod_link[0] == "/":
+                    prod_link = "https://www.walmart.com" + prod_link
+                elif prod_link[0] == "w":
+                    prod_link = "https://www." + prod_link
+                product_links.add(prod_link)
         
     def retrieve_product_data(self, body):
         """
@@ -273,7 +302,7 @@ class product_utility:
         if cents_amount is None:
             raise ValueError("Product cent amount could not be found")
         
-        price = dollar_amount.text + '.' + cents_amount.text
+        price = (dollar_amount.text + '.' + cents_amount.text).replace(",", "")
 
         breadcrumb_element = body.select_one("ol.breadcrumb-list")
         if breadcrumb_element is None:
@@ -294,19 +323,23 @@ class product_utility:
         manufacturer = None
         spec_table = body.select_one(
             "table.product-specification-table.table-striped")
-        if spec_table is None:
-            raise ValueError("Specification Table could not be found")
-        spec_tbody = spec_table.tbody
-        spec_rows = spec_tbody.find_all('tr')
-        for row in spec_rows:
-            cols = row.find_all('td')
-            if cols[0].text == 'Brand':
-                if len(cols) == 1:
-                    raise ValueError("Brand name could not be found")
-                brand = cols[1].text
-            elif cols[0].text == 'Manufacturer':
-                if len(cols) > 1:
-                    manufacturer = cols[1].text
+        if spec_table is not None:
+            spec_tbody = spec_table.tbody
+            spec_rows = spec_tbody.find_all('tr')
+            for row in spec_rows:
+                cols = row.find_all('td')
+                if cols[0].text == 'Brand':
+                    if len(cols) == 1:
+                        raise ValueError("Brand name could not be found")
+                    brand = cols[1].text
+                elif cols[0].text == 'Manufacturer':
+                    if len(cols) > 1:
+                        manufacturer = cols[1].text
+
+        if brand is None:
+            brand = body.select_one("a.prod-brandName")
+            if brand is not None:
+                brand = brand.span.text
 
         if brand is None:
             raise ValueError("Brand name row could not be found")
@@ -350,6 +383,7 @@ class product_utility:
         while(True):
             try:
                 self.browser.get(url)
+                self.browser.set_page_load_timeout(90)
                 # Running the scrapper faster triggers a re-captcha
                 time.sleep(3)
 
@@ -367,7 +401,7 @@ class product_utility:
                 if soupPage.find("span", {"class": "zero-results-message "
                                           "message active message-warning "
                                           "message-block"}):
-                    raise ValueError("Page returned no results")
+                    raise ValueError("Warning: Returned no results: {}".format(url))
 
                 # Product pages need additional interaction to get the product
                 # specifications by clicking on a specifications tab, which
@@ -375,8 +409,24 @@ class product_utility:
                 if is_product_data:
                     specs_element = self.browser.find_elements_by_xpath(
                         "//*[contains(text(), 'Specifications')]")
-                    specs_element[0].click()
-                    # Wait for the browser to update
+                    # Product does not have a Spec table, no need to
+                    # activate the table
+                    if len(specs_element) == 0:
+                        return soupPage.body
+
+                    while(True):                         
+                        try:
+                            specs_element[0].click()
+                            break
+                        except common.exceptions.StaleElementReferenceException:
+                            specs_element = self.browser.find_elements_by_xpath(
+                            "//*[contains(text(), 'Specifications')]")
+                        except common.exceptions.ElementNotInteractableException:
+                            return soupPage.body
+                        except common.exceptions.ElementClickInterceptedException:
+                            specs_element = self.browser.find_elements_by_xpath(
+                            "//*[contains(text(), 'Specifications')]")
+                        
                     time.sleep(2)
                     try:
                         nav = self.browser.find_element_by_class_name(
@@ -397,6 +447,7 @@ class product_utility:
             
             # Handling for a timeout
             except common.exceptions.TimeoutException:
+                print("Timout occured for {}".format(url))
                 time.sleep(10)
     
     def store_product_data(self, product_data):
@@ -455,15 +506,24 @@ class product_utility:
         else:
             shelf_id = shelf_id_result[0][0]
 
-        query = ("INSERT INTO product(shelf_id, product_name, price, "
-                 "brand_name, manufacturer_name) VALUES (%s, %s, %s, %s, %s);")
-        self.database_cursor.execute(
-            query, (shelf_id,
-                    product_data.get("name"),
-                    product_data.get("price"),
-                    product_data.get("brand_name"),
-                    product_data.get("manufacturer_name")))
-        self.database_connection.commit()
+        try:
+            query = ("INSERT INTO product(shelf_id, product_name, price, "
+                     "brand_name, manufacturer_name) "
+                     "VALUES (%s, %s, %s, %s, %s);")
+            self.database_cursor.execute(
+                query, (shelf_id,
+                        product_data.get("name"),
+                        product_data.get("price"),
+                        product_data.get("brand_name"),
+                        product_data.get("manufacturer_name")))
+            self.database_connection.commit()
+        except mysql.connector.errors.IntegrityError:
+            print("Warning: {} already exists in system".format(
+                product_data.get("name")))
+        except mysql.connector.errors.DataError:
+            name = product_data.get("name")
+            print("Warning: Name {} is too long with {} characters".format(
+                name, len(name)))
         
         return self.database_cursor.lastrowid
 
@@ -477,33 +537,45 @@ class product_utility:
     
         Parameters
         ----------
-        product_links (list): List of product links
+        product_links (set): Set of product links
         """
+        product_links = list(product_links)
         catalog_size = len(product_links)
         if len(product_links) > self.max_catalog_size:
+            if settings.STAGE == "prod":
+                print("Scambleing products")
             catalog_size = self.max_catalog_size
             random.shuffle(product_links)
             with open(self.product_links_file_name, "w") as file:
                 for link in product_links:
                     file.write("{}".format(link))
+        if settings.STAGE == "prod":
+            print("Collecting product data...")
         batch_removal_counter = 0
         for idx in range(0, catalog_size):
-            page_body = self.retrieve_link_body(product_links[idx])
-            product_data = self.retrieve_product_data(page_body)
-            self.store_product_data(product_data)
-            batch_removal_counter += 1
-            if batch_removal_counter == 40:
-                temp_product_links = []
-                if path.isfile(self.product_links_file_name):
-                    with open(self.product_links_file_name, "r") as file:
-                        temp_product_links = file.readlines()
-                with open(self.product_links_file_name, "w") as file:
-                    for link in temp_product_links[40:]:
-                        file.write("{}".format(link))
-                batch_removal_counter = 0
+            try:
+                page_body = self.retrieve_link_body(product_links[idx], True)
+                product_data = self.retrieve_product_data(page_body)
+                self.store_product_data(product_data)
+                batch_removal_counter += 1
+                if batch_removal_counter == 40:
+                    if settings.STAGE == "prod":
+                        print("Removing batched {} links".format(
+                            batch_removal_counter))
+                    with open(self.product_links_file_name, "w") as file:
+                        for link in product_links[idx + 1:]:
+                            file.write("{}\n".format(link))
+                    batch_removal_counter = 0
+            except ValueError as error:
+                self.log_error(error, product_links[idx])
+            except TypeError as error:
+                print("Warning: {} for {}".format(
+                        error, product_links[idx]))
+                
+        print("Product data collection complete")
 
     def retrieve_product_links(
-        self, link, previous_links, prev_product_lists, product_links):
+        self, link, previous_links, finished_links, product_links):
         """
         Collects links of bestseller products from all subcategories following
         the provided link without revisiting categories
@@ -521,39 +593,55 @@ class product_utility:
             raise ValueError("Provided link must contain a link")
         elif type(previous_links) is not set:
             raise TypeError("Provided previous_links is not a set")
-        elif type(prev_product_lists) is not set:
-            raise TypeError("Provided prev_product_lists is not a set")
+        elif type(finished_links) is not set:
+            raise TypeError("Provided finished_links is not a set")
         elif type(product_links) is not set:
             raise TypeError("Provided product_links is not a set")
 
         previous_links.add(link)
-        page_body = self.retrieve_link_body(link)
-        prod_list_tag = page_body.find("div",{"class":"search-product-result"})
         try:
+            page_body = self.retrieve_link_body(link)
+        except ValueError as error:
+                self.log_error(error, link)
+        else:
+            prod_list_tag = page_body.find("div",{
+                "class":"search-product-result"})
             if prod_list_tag is not None:
-                if link not in prev_product_lists:
-                    prev_product_lists.add(link)
-                    self.retrieve_bestseller_links(page_body, product_links)
+                if link not in finished_links:
+                    finished_links.add(link)
+                    try:
+                        self.retrieve_bestseller_links(
+                            page_body, product_links)
+                    except ValueError as error:
+                        self.log_error(error, link)
                     for page in range(2, self.get_max_product_list_depth() + 1):
                         page_link = link + "&page={}".format(page)
-                        prod_body = self.retrieve_link_body(page_link)
-                        self.retrieve_bestseller_links(prod_body, product_links)
-                        with open(self.get_product_links_file_name(),
-                                  "w") as file:
-                            file.writelines(product_links)
-                        with open(self.get_previous_links_file_name(),
-                                  "w") as file:
-                            file.writelines(prev_product_lists)
+                        try:
+                            prod_body = self.retrieve_link_body(page_link)
+                            self.retrieve_bestseller_links(
+                                prod_body, product_links)
+                        except ValueError as error:
+                            self.log_error(error, link)
+                    with open(self.get_product_links_file_name(),
+                              "w") as file:
+                        for line in product_links:
+                            file.write(line + "\n")
             else:
-                category_links = self.retrieve_category_links(page_body)
-                for category_link in category_links:
-                    if category_link not in previous_links:
-                        self.retrieve_product_links(category_link,
-                                                    previous_links,
-                                                    prev_product_lists,
-                                                    product_links)
-        except ValueError as error:
-            print("Warning: {}".format(error))
+                try:
+                    category_links = self.retrieve_category_links(page_body)
+                    for category_link in category_links:
+                        if (category_link not in previous_links
+                                and category_link not in finished_links):
+                            self.retrieve_product_links(category_link,
+                                                        previous_links,
+                                                        finished_links,
+                                                        product_links)
+                except ValueError as error:
+                    self.log_error(error, link)
+                
+        finished_links.add(link)
+        with open(self.get_finished_links_file_name(), "a") as file:
+            file.write(link + "\n")
 
     def fill_product_catalog(self, dept_list):
         """
@@ -575,15 +663,32 @@ class product_utility:
                 for line in file.readlines():
                     product_links.add(line.strip())
                 
-        if path.isfile(self.get_previous_links_file_name()):
-            with open(self.get_previous_links_file_name(), "r") as file:
+        if path.isfile(self.get_finished_links_file_name()):
+            with open(self.get_finished_links_file_name(), "r") as file:
                 for line in file.readlines():
                     prev_product_lists.add(line.strip())
-                
+
+
         for dept_link in dept_list.keys():
+            if settings.STAGE == "prod":
+                print("Collecting product links for {}".format(dept_link))
             self.set_current_department_name(dept_list.get(dept_link))
             self.retrieve_product_links(
                 dept_link, previous_links, prev_product_lists, product_links)
-            
-        self.retrieve_product_catalog(product_links)
+            self.retrieve_product_catalog(product_links)
+            product_links = set()
+
+    def log_error(self, error, link):
+        """
+        Prints errors to the console in a unified manner
+
+        Parameters
+        ----------
+        error(Exception): the exception instance
+        link(str): link that raised the error 
+        """
+        if str(error)[0:4] == "Warn":
+            print(error)
+        else:
+            print("Warning: {} for {}".format(error, link))
             
