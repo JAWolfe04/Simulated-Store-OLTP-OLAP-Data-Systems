@@ -14,14 +14,14 @@ Simulated superstore chain data system with simulated data and data warehousing
 # Documentation
 
 ## Technologies
-Python 3.8
-Pytest
-FastAPI
-PostgreSQL
-Airflow
-Docker
-Hive
-Spark
+* Python 3.8
+* Pytest
+* FastAPI
+* PostgreSQL
+* Airflow
+* Docker
+* Hive
+* Spark
 
 ## User Stories
 User Stories can be found at [User Stories](https://github.com/JAWolfe04/Simulated-Store-OLTP-OLAP-Data-Systems/blob/main/docs/User_Stories.md)
