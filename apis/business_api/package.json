@@ -1,0 +1,38 @@
+{
+  "name": "business_api",
+  "version": "1.0.0",
+  "description": "Frontend API for managing data from the superstore data simulation application",
+  "main": "business_api_server.js",
+  "directories": {
+    "test": "__tests__"
+  },
+  "scripts": {
+	"start": "",
+    "test": "jest"
+  },
+  "jest": {
+	"roots": ["__tests__/"]
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JAWolfe04/Simulated-Store-OLTP-OLAP-Data-Systems.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+	"bcryptjs": "^2.4.3",
+	"body-parser": "^1.19.0",
+	"dotenv": "^10.0.0",
+	"express": "^4.17.1",
+	"jsonwebtoken": "^8.5.1",
+	"multer": "^1.4.2",
+	"pg": "^8.6.0"
+  },
+  "devDependencies": {
+	"jest": "^27.0.6"
+  },
+  "bugs": {
+    "url": "https://github.com/JAWolfe04/Simulated-Store-OLTP-OLAP-Data-Systems/issues"
+  },
+  "homepage": "https://github.com/JAWolfe04/Simulated-Store-OLTP-OLAP-Data-Systems#readme"
+}
