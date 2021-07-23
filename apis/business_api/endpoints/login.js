@@ -14,14 +14,13 @@ router.post('/access-token', multer.array(), async function (req, res, next) {
 	if (!password) { return res.status(400).send('"password" Field Not Provided'); };
 	try {
 		const auth = await crud_user.authentiate_user(username, password);
-		console.log(auth);
 		if (auth == null) {
 			res.status(401).send('Invalid username or password');
 		} else if (auth.disabled) {
 			res.status(401).send('Blocked user');
 		} else {
 			const access_token = await security.create_access_token(username);
-			res.json({"access_token": access_token, "token_type": "bearer"});
+			res.status(201).json({"access_token": access_token, "token_type": "bearer"});
 		};
 	} catch (err) { console.log(err.stack); };
 });

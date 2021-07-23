@@ -1,8 +1,4 @@
-const express = require('express');
-const app = express();
-const router = require('./endpoints/api_router');
-
-app.use('/', router);
+const app = require('./server_app');
 
 const server = app.listen(8081, function () {
    let host = server.address().address;
