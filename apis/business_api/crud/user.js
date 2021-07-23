@@ -23,7 +23,8 @@ async function create_user(username, password) {
 async function authentiate_user(username, password) {
 	try {
 		const user = await get_user(username);
-		if (user == null || !security.verify_password(password, user.hash_password)) {
+		const verified = await security.verify_password(password, user.hash_password);
+		if (user == null || !verified) {
 			return null;
 		} else {
 			return user;
