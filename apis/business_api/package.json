@@ -5,7 +5,10 @@
   "main": "business_api_server.js",
   "scripts": {
     "start": "node business_api_server.js",
-    "test": "jest --detectOpenHandles"
+    "test": "jest --coverage --verbose false --detectOpenHandles"
+  },
+  "jest": {
+	"testPathIgnorePatterns": ["/node_modules/", "<rootDir>/__tests__/crud/test_database"]
   },
   "repository": {
     "type": "git",

@@ -3,3 +3,4 @@
 *.pyc
 env/*
 apis/business_api/node_modules/*
+apis/business_api/coverage/*

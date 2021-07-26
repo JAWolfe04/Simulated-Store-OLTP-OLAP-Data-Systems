@@ -2,14 +2,11 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const config = require('./config');
 
-const jwtExpirySeconds = 60 * 60 * 3;
-const algorithm = 'HS256';
-
 async function create_access_token(username) {
 	try {
 		return await jwt.sign({ username }, config.JWT_KEY, 
-			{ algorithm: algorithm,
-			  expiresIn: jwtExpirySeconds, });
+			{ algorithm: config.ALGORITHM,
+			  expiresIn: config.JWT_EXPIRY_SECONDS, });
 	} catch (err) { console.log(err.stack); };
 };
 
@@ -33,7 +30,7 @@ async function verify_access_token(token, res) {
 
 async function verify_password(plain_password, hashed_password) {
 	try {
-		return await bcrypt.compareSync(plain_password, hashed_password);
+		return await bcrypt.compare(plain_password, hashed_password);
 	} catch (err) { console.log(err.stack); };
 };
 
@@ -45,6 +42,7 @@ async function get_password_hash(password) {
 
 module.exports = {
 	create_access_token,
+	verify_access_token,
 	verify_password,
 	get_password_hash
 };
